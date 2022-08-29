@@ -45,13 +45,23 @@ find_package("${rmw_implementation}" REQUIRED)
 
 find_package(px4_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
+
+find_package(nav_msgs REQUIRED)
+find_package(mav_msgs REQUIRED)
+find_package(trajectory_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 
 find_package(PythonInterp 3 REQUIRED)
-if(ROS_DISTRO IN_LIST ROS_DISTROS)
-  find_package(eigen3_cmake_module REQUIRED)
-endif()
-find_package(Eigen3 REQUIRED NO_MODULE)
+
+#非ros2依赖项
+find_package(Eigen3 REQUIRED)
+include_directories(${EIGEN3_INCLUDE_DIR})
+add_definitions(${EIGEN_DEFINITIONS})
+
+##if(ROS_DISTRO IN_LIST ROS_DISTROS)
+#  find_package(eigen3_cmake_module REQUIRED)
+#endif()
+#find_package(Eigen3 REQUIRED NO_MODULE)
 
 ###################################
 # Generate micro-RTPS agent code ##
@@ -66,16 +76,29 @@ include(GenerateMicroRTPSAgent)
 #################
 
 include_directories(include)
+include_directories(lib)
+
+add_library(cvxgen_solver SHARED 
+  lib/ldl.c
+  lib/solver.c
+  lib/matrix_support.c
+  lib/util.c
+)
 
 function(custom_executable subfolder target)
   add_executable(${target} src/${subfolder}/${target}.cpp)
   ament_target_dependencies(${target}
     rclcpp
     px4_msgs
+    nav_msgs
+    trajectory_msgs
+    geometry_msgs
+    mav_msgs
   )
   install(TARGETS ${target}
   DESTINATION lib/${PROJECT_NAME})
 endfunction()
+
 
 # Add frame_transforms lib
 add_library(frame_transforms SHARED src/lib/frame_transforms.cpp)
@@ -93,10 +116,15 @@ ament_target_dependencies(micrortps_agent fastcdr fastrtps rclcpp)
 target_link_libraries(micrortps_agent fastcdr fastrtps ${rclcpp_LIBRARIES})
 
 # Add examples
-custom_executable(examples/listeners sensor_combined_listener)
-custom_executable(examples/listeners vehicle_gps_position_listener)
-custom_executable(examples/advertisers debug_vect_advertiser)
-custom_executable(examples/offboard offboard_control)
+#custom_executable(examples/listeners sensor_combined_listener)
+#custom_executable(examples/listeners vehicle_gps_position_listener)
+#custom_executable(examples/advertisers debug_vect_advertiser)
+#custom_executable(examples/offboard offboard_control)
+#custom_executable(shared_control sensor_combined)
+#custom_executable(shared_control trajectory_pub)
+#custom_executable(shared_control offboard_control_original)
+custom_executable(shared_control LinearModelPredictiveControl)
+target_link_libraries(LinearModelPredictiveControl cvxgen_solver)
 
 ############
 # Install ##
@@ -140,9 +168,14 @@ install(TARGETS micrortps_agent
         INCLUDES DESTINATION include
 )
 
+
 # Install launch files
 install(DIRECTORY
   launch
+  DESTINATION share/${PROJECT_NAME}
+)
+
+install(FILES mapping_rules.yaml
   DESTINATION share/${PROJECT_NAME}
 )
 

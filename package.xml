@@ -24,6 +24,7 @@
   <depend>px4_msgs</depend>
   <depend>geometry_msgs</depend>
   <depend>sensor_msgs</depend>
+  <depend>nav_msgs</depend>
 
   <depend>launch</depend>
   <depend>launch_testing</depend>
@@ -36,5 +37,6 @@
 
   <export>
     <build_type>ament_cmake</build_type>
+    <ros1_bridge mapping_rules="mapping_rules.yaml"/>
   </export>
 </package>

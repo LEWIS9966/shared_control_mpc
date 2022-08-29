@@ -48,6 +48,7 @@
 #include <px4_msgs/msg/timesync.hpp>
 #include <px4_msgs/msg/vehicle_command.hpp>
 #include <px4_msgs/msg/vehicle_control_mode.hpp>
+#include <px4_msgs/msg/sensor_data_computed.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <stdint.h>
 
@@ -83,6 +84,13 @@ public:
 				[this](const px4_msgs::msg::Timesync::UniquePtr msg) {
 					timestamp_.store(msg->timestamp);
 				});
+		sensor_data_computed_sub_ =
+			this->create_subscription<SensorDataComputed>("target/sensor_combined", 10,
+				[this](const px4_msgs::msg::SensorDataComputed::UniquePtr msg) {
+					setpoint_x = msg -> vehicle_y_d + 5;
+					setpoint_y = msg -> vehicle_x_d;
+					setpoint_z = msg -> vehicle_z_d;
+				});
 
 		offboard_setpoint_counter_ = 0;
 
@@ -96,12 +104,13 @@ public:
 				this->arm();
 			}
 
-            		// offboard_control_mode needs to be paired with trajectory_setpoint
-			publish_offboard_control_mode();
-			publish_trajectory_setpoint();
+		 // offboard_control_mode needs to be paired with trajectory_setpoint
 
-           		 // stop the counter after reaching 11
-			if (offboard_setpoint_counter_ < 11) {
+		 	 publish_offboard_control_mode();
+			 publish_trajectory_setpoint(setpoint_x, setpoint_y, setpoint_z);
+		 	
+		 // stop the counter after reaching 11
+			if (offboard_setpoint_counter_ < 21) {
 				offboard_setpoint_counter_++;
 			}
 		};
@@ -112,11 +121,13 @@ public:
 	void disarm() const;
 
 private:
+	float setpoint_x, setpoint_y, setpoint_z, yaw_desired;
 	rclcpp::TimerBase::SharedPtr timer_;
 
 	rclcpp::Publisher<OffboardControlMode>::SharedPtr offboard_control_mode_publisher_;
 	rclcpp::Publisher<TrajectorySetpoint>::SharedPtr trajectory_setpoint_publisher_;
 	rclcpp::Publisher<VehicleCommand>::SharedPtr vehicle_command_publisher_;
+	rclcpp::Subscription<px4_msgs::msg::SensorDataComputed>::SharedPtr sensor_data_computed_sub_;
 	rclcpp::Subscription<px4_msgs::msg::Timesync>::SharedPtr timesync_sub_;
 
 	std::atomic<uint64_t> timestamp_;   //!< common synced timestamped
@@ -124,9 +135,10 @@ private:
 	uint64_t offboard_setpoint_counter_;   //!< counter for the number of setpoints sent
 
 	void publish_offboard_control_mode() const;
-	void publish_trajectory_setpoint() const;
+	void publish_trajectory_setpoint(float x, float y, float z) const;
 	void publish_vehicle_command(uint16_t command, float param1 = 0.0,
 				     float param2 = 0.0) const;
+	void takeoff() const;
 };
 
 /**
@@ -169,13 +181,24 @@ void OffboardControl::publish_offboard_control_mode() const {
  *        For this example, it sends a trajectory setpoint to make the
  *        vehicle hover at 5 meters with a yaw angle of 180 degrees.
  */
-void OffboardControl::publish_trajectory_setpoint() const {
+void OffboardControl::publish_trajectory_setpoint(float x, float y, float z) const {
 	TrajectorySetpoint msg{};
 	msg.timestamp = timestamp_.load();
-	msg.x = 0.0;
-	msg.y = 0.0;
-	msg.z = -5.0;
-	msg.yaw = -3.14; // [-PI:PI]
+	msg.x = x;
+	msg.y = y;
+	msg.z = z;
+	msg.yaw = 3.1415926; // [-PI:PI]
+
+	trajectory_setpoint_publisher_->publish(msg);
+}
+
+void OffboardControl::takeoff() const {
+	TrajectorySetpoint msg{};
+	msg.timestamp = timestamp_.load();
+	msg.x = 0;
+	msg.y = 0;
+	msg.z = -5;
+	msg.yaw = 0; // [-PI:PI]
 
 	trajectory_setpoint_publisher_->publish(msg);
 }
@@ -201,6 +224,8 @@ void OffboardControl::publish_vehicle_command(uint16_t command, float param1,
 
 	vehicle_command_publisher_->publish(msg);
 }
+
+
 
 int main(int argc, char* argv[]) {
 	std::cout << "Starting offboard control node..." << std::endl;

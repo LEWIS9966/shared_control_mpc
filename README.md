@@ -18,3 +18,4 @@ Use the [Issues](https://github.com/PX4/px4_ros_com/issues) section to create a 
 
 Reach the PX4 development team on the `#messaging` or `#ros` PX4 Slack channels:
 [![Slack](https://px4-slack.herokuapp.com/badge.svg)](http://slack.px4.io)
+# shared_control_mpc
