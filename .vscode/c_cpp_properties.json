@@ -11,14 +11,15 @@
                 "/home/lewis/px4_ros_com_ros2/install/px4_ros_com/include/**",
                 "/home/lewis/px4_ros_com_ros2/install/px4_msgs/include/**",
                 "/home/lewis/px4_ros_com_ros2/install/mav_msgs/include/**",
-                "/opt/ros/foxy/include/**",
+                "/opt/ros/foxy/share/**",
                 "/home/lewis/px4_ros_com_ros2/src/cpp_pubsub/include/**",
                 "/home/lewis/px4_ros_com_ros2/src/joystick/include/**",
-                "/home/lewis/px4_ros_com_ros2/src/mav_msgs/include/**",
                 "/home/lewis/px4_ros_com_ros2/src/px4_ros_com/include/**",
                 "/home/lewis/px4_ros_com_ros2/src/px4_ros_com/lib/",
                 "/usr/lib/gcc/x86_64-linux-gnu/9/include",
-                "/usr/include/**"
+                "/usr/include/**",
+                "${workspaceFolder}/include",
+                "/usr/include/c++/9"
             ],
             "name": "ROS",
             "intelliSenseMode": "gcc-x64",

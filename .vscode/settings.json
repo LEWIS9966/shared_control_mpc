@@ -4,10 +4,14 @@
         100
     ],
     "files.associations": {
+        "*.txt": "cmake",
         "*.repos": "yaml",
         "*.world": "xml",
         "*.xacro": "xml",
-        "chrono": "cpp"
+        "chrono": "cpp",
+        "ostream": "cpp",
+        "cmath": "cpp",
+        "complex": "cpp"
     },
     // Autocomplete from ros python packages
     "python.autoComplete.extraPaths": [
@@ -65,4 +69,20 @@
         ".vscode-insiders",
         ".devcontainer/devcontainer.json"
     ]
+    "workbench.colorCustomizations": {
+
+        "editor.selectionBackground": "#6c6c6c",    //選取字色 'you can set other color'
+        
+        "editor.findMatchBackground": "#FFFF96",  //搜索選取字色 'you can set other color'
+        
+        "editor.selectionHighlightBackground": "#8fe5eb9b", //選取字改透明色  'required important'
+        
+        "editor.findMatchHighlightBackground": "#00000000", //搜索選取字改透明色 'required important'
+        
+        "editor.wordHighlightBackground": "#00000000",  //全文相同選取字改透明色 'required important'
+        
+        "editorBracketMatch.border": "#fff200",   //括號的框線色 'you can set other color'
+        
+        "editorBracketMatch.background": "#66414100"  //括號的背景色 'you can set other color'
+    }
 }

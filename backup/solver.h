@@ -1,4 +1,4 @@
-/* Produced by CVXGEN, 2022-11-07 08:31:55 -0500.  */
+/* Produced by CVXGEN, 2022-09-26 12:22:00 -0400.  */
 /* CVXGEN is Copyright (C) 2006-2017 Jacob Mattingley, jem@cvxgen.com. */
 /* The code in this file is Copyright (C) 2006-2017 Jacob Mattingley. */
 /* CVXGEN, or solvers produced by CVXGEN, cannot be used for commercial */
@@ -20,9 +20,12 @@
 #include <stdio.h>
 #endif
 #endif
+
 #ifdef __cplusplus
  extern "C" {
 #endif
+
+
 /* Space must be allocated somewhere (testsolver.c, csolve.c or your own */
 /* program) for the global variables vars, params, work and settings. */
 /* At the bottom of this file, they are externed. */
@@ -40,69 +43,53 @@ typedef struct Params_t {
   double R_delta[9];
   double x_ss_1[8];
   double u_ss_1[3];
-  double x_sc_1[8];
-  double Q_x_sc[64];
   double x_ss_2[8];
   double u_ss_2[3];
-  double x_sc_2[8];
   double x_ss_3[8];
   double u_ss_3[3];
-  double x_sc_3[8];
   double x_ss_4[8];
   double u_ss_4[3];
-  double x_sc_4[8];
   double x_ss_5[8];
   double u_ss_5[3];
-  double x_sc_5[8];
   double x_ss_6[8];
   double u_ss_6[3];
-  double x_sc_6[8];
   double x_ss_7[8];
   double u_ss_7[3];
-  double x_sc_7[8];
   double x_ss_8[8];
   double u_ss_8[3];
-  double x_sc_8[8];
   double x_ss_9[8];
   double u_ss_9[3];
-  double x_sc_9[8];
   double x_ss_10[8];
   double u_ss_10[3];
-  double x_sc_10[8];
   double x_ss_11[8];
   double u_ss_11[3];
-  double x_sc_11[8];
   double x_ss_12[8];
   double u_ss_12[3];
-  double x_sc_12[8];
   double x_ss_13[8];
   double u_ss_13[3];
-  double x_sc_13[8];
   double x_ss_14[8];
   double u_ss_14[3];
-  double x_sc_14[8];
   double x_ss_15[8];
   double u_ss_15[3];
-  double x_sc_15[8];
   double x_ss_16[8];
   double u_ss_16[3];
-  double x_sc_16[8];
   double x_ss_17[8];
   double u_ss_17[3];
-  double x_sc_17[8];
   double x_ss_18[8];
   double u_ss_18[3];
-  double x_sc_18[8];
   double x_ss_19[8];
+  double u_ss_19[3];
+  double x_ss_20[8];
+  double u_ss_20[3];
+  double x_ss_21[8];
   double P[64];
   double A[64];
   double B[24];
   double u_min[3];
   double u_max[3];
   double *x[1];
-  double *x_ss[20];
-  double *u_ss[19];
-  double *x_sc[19];
+  double *x_ss[22];
+  double *u_ss[21];
 } Params;
 typedef struct Vars_t {
   double *u_0; /* 3 rows. */
@@ -161,29 +148,35 @@ typedef struct Vars_t {
   double *u_18; /* 3 rows. */
   double *t_18; /* 3 rows. */
   double *x_19; /* 8 rows. */
-  double *u[19];
-  double *x[20];
+  double *u_19; /* 3 rows. */
+  double *t_19; /* 3 rows. */
+  double *x_20; /* 8 rows. */
+  double *u_20; /* 3 rows. */
+  double *t_20; /* 3 rows. */
+  double *x_21; /* 8 rows. */
+  double *u[21];
+  double *x[22];
 } Vars;
 typedef struct Workspace_t {
-  double h[114];
-  double s_inv[114];
-  double s_inv_z[114];
-  double b[206];
-  double q[263];
-  double rhs[697];
-  double x[697];
+  double h[126];
+  double s_inv[126];
+  double s_inv_z[126];
+  double b[228];
+  double q[291];
+  double rhs[771];
+  double x[771];
   double *s;
   double *z;
   double *y;
-  double lhs_aff[697];
-  double lhs_cc[697];
-  double buffer[697];
-  double buffer2[697];
-  double KKT[3284];
-  double L[5723];
-  double d[697];
-  double v[697];
-  double d_inv[697];
+  double lhs_aff[771];
+  double lhs_cc[771];
+  double buffer[771];
+  double buffer2[771];
+  double KKT[3638];
+  double L[6355];
+  double d[771];
+  double v[771];
+  double d_inv[771];
   double gap;
   double optval;
   double ineq_resid_squared;
@@ -195,59 +188,45 @@ typedef struct Workspace_t {
   double quad_689417555968[1];
   double quad_590025695232[1];
   double quad_24887435264[1];
-  double quad_482555469824[1];
   double quad_373406756864[1];
   double quad_282534416384[1];
-  double quad_546321035264[1];
   double quad_569492807680[1];
   double quad_658085392384[1];
-  double quad_136274907136[1];
   double quad_268442972160[1];
   double quad_212760903680[1];
-  double quad_292477943808[1];
   double quad_604237524992[1];
   double quad_899615596544[1];
-  double quad_236813221888[1];
   double quad_9807298560[1];
   double quad_730290806784[1];
-  double quad_125214162944[1];
   double quad_691068739584[1];
   double quad_512929845248[1];
-  double quad_765018726400[1];
   double quad_46428270592[1];
   double quad_907958816768[1];
-  double quad_498158702592[1];
   double quad_364190564352[1];
   double quad_603410014208[1];
-  double quad_602552958976[1];
   double quad_253294055424[1];
   double quad_406480764928[1];
-  double quad_126845026304[1];
   double quad_450189660160[1];
   double quad_622448181248[1];
-  double quad_667969515520[1];
   double quad_135073144832[1];
   double quad_512757641216[1];
-  double quad_528719572992[1];
   double quad_265658822656[1];
   double quad_225439469568[1];
-  double quad_80428859392[1];
   double quad_611752235008[1];
   double quad_945124098048[1];
-  double quad_488712749056[1];
   double quad_625116979200[1];
   double quad_566313590784[1];
-  double quad_929914191872[1];
   double quad_323441446912[1];
   double quad_589385719808[1];
-  double quad_645508136960[1];
   double quad_920610275328[1];
   double quad_700597231616[1];
-  double quad_648348295168[1];
   double quad_379984363520[1];
   double quad_438523551744[1];
-  double quad_842968133632[1];
-  double quad_677275955200[1];
+  double quad_43660177408[1];
+  double quad_837056782336[1];
+  double quad_396244647936[1];
+  double quad_326908334080[1];
+  double quad_28181692416[1];
   int converged;
 } Workspace;
 typedef struct Settings_t {
@@ -281,6 +260,14 @@ void fillh(void);
 void fillb(void);
 void pre_ops(void);
 
+/* Function definitions in ldl.c: */
+void ldl_solve(double *target, double *var);
+void ldl_factor(void);
+double check_factorization(void);
+void matrix_multiply(double *result, double *source);
+double check_residual(double *target, double *multiplicand);
+void fill_KKT(void);
+
 /* Function definitions in solver.c: */
 double eval_gap(void);
 void set_defaults(void);
@@ -313,14 +300,6 @@ float ran1(long*idum, int reset);
 float randn_internal(long *idum, int reset);
 double randn(void);
 void reset_rand(void);
-
-/* Function definitions in ldl.c: */
-void ldl_solve(double *target, double *var);
-void ldl_factor(void);
-double check_factorization(void);
-void matrix_multiply(double *result, double *source);
-double check_residual(double *target, double *multiplicand);
-void fill_KKT(void);
 
 #ifdef __cplusplus
  }

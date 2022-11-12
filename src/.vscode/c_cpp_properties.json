@@ -15,8 +15,9 @@
         "/home/lewis/px4_ros_com_ros2/src/cpp_pubsub/include/**",
         "/home/lewis/px4_ros_com_ros2/src/joystick/include/**",
         "/home/lewis/px4_ros_com_ros2/src/mav_msgs/include/**",
-        "/home/lewis/px4_ros_com_ros2/src/px4_ros_com/include/**",
-        "/usr/include/**"
+        "/home/lewis/px4_ros_com_ros2/src/px4_ros_com/include/",
+        "/usr/include/**",
+        "/usr/lib/gcc/x86_64-linux-gnu/9/include"
       ],
       "name": "ROS",
       "intelliSenseMode": "clang-x64",

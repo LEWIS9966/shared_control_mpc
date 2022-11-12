@@ -40,23 +40,28 @@ find_package(builtin_interfaces REQUIRED)
 find_package(fastcdr REQUIRED)
 find_package(fastrtps REQUIRED)
 find_package(rclcpp REQUIRED)
+find_package(rclpy REQUIRED)
 get_default_rmw_implementation(rmw_implementation)
 find_package("${rmw_implementation}" REQUIRED)
 
 find_package(px4_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
-
 find_package(nav_msgs REQUIRED)
 find_package(mav_msgs REQUIRED)
 find_package(trajectory_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
+find_package(visualization_msgs REQUIRED)
 
 find_package(PythonInterp 3 REQUIRED)
+find_package(backward_ros REQUIRED)
+find_package(tf2 REQUIRED)
+find_package(tf2_ros REQUIRED)
 
 #非ros2依赖项
 find_package(Eigen3 REQUIRED)
 include_directories(${EIGEN3_INCLUDE_DIR})
 add_definitions(${EIGEN_DEFINITIONS})
+
 
 ##if(ROS_DISTRO IN_LIST ROS_DISTROS)
 #  find_package(eigen3_cmake_module REQUIRED)
@@ -84,6 +89,16 @@ add_library(cvxgen_solver SHARED
   lib/matrix_support.c
   lib/util.c
 )
+add_library(mpc_queue SHARED
+  lib/mpc_queue.cpp
+)
+ament_target_dependencies(mpc_queue
+  trajectory_msgs
+)
+target_include_directories(mpc_queue PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}>
+)
+
 
 function(custom_executable subfolder target)
   add_executable(${target} src/${subfolder}/${target}.cpp)
@@ -93,6 +108,9 @@ function(custom_executable subfolder target)
     nav_msgs
     trajectory_msgs
     geometry_msgs
+    visualization_msgs 
+    tf2
+    tf2_ros
     mav_msgs
   )
   install(TARGETS ${target}
@@ -121,10 +139,15 @@ target_link_libraries(micrortps_agent fastcdr fastrtps ${rclcpp_LIBRARIES})
 #custom_executable(examples/advertisers debug_vect_advertiser)
 #custom_executable(examples/offboard offboard_control)
 #custom_executable(shared_control sensor_combined)
-#custom_executable(shared_control trajectory_pub)
-#custom_executable(shared_control offboard_control_original)
+custom_executable(shared_control trajectory_pub)
+custom_executable(shared_control offboard_control_original)
 custom_executable(shared_control LinearModelPredictiveControl)
 target_link_libraries(LinearModelPredictiveControl cvxgen_solver)
+target_link_libraries(LinearModelPredictiveControl mpc_queue)
+custom_executable(shared_control LinearModelPredictiveControl_test)
+target_link_libraries(LinearModelPredictiveControl_test cvxgen_solver)
+custom_executable(shared_control joystick_node)
+custom_executable(shared_control record_node)
 
 ############
 # Install ##
@@ -172,10 +195,6 @@ install(TARGETS micrortps_agent
 # Install launch files
 install(DIRECTORY
   launch
-  DESTINATION share/${PROJECT_NAME}
-)
-
-install(FILES mapping_rules.yaml
   DESTINATION share/${PROJECT_NAME}
 )
 

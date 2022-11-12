@@ -1,293 +1,84 @@
 #include <px4_ros_com/LinearModelPredictiveControl.hpp>
-#include <iostream>
+#include <fstream>
+#define MARKER_KEEPLAST 700
 
 
 using namespace shared_control_mpc;
+Vars vars;
+Params params;
+Workspace work;
+Settings settings;
+Eigen::Matrix<double, kStateSize, kStateSize> model_A;   //dynamics matrix
+Eigen::Matrix<double, kStateSize, kInputSize> model_B;   //transfer matrix
+Eigen::Matrix<double, kStateSize, kInputSize> model_Bd; 
+Eigen::MatrixXd LQR_K;
 
-void LinearModelPredictiveControl::load_data_x_ss(Params params){
-  params.x_0[0] = 0.20319161029830202;
-  params.x_0[1] = 0.8325912904724193;
-  params.x_0[2] = -0.8363810443482227;
-  params.x_0[3] = 0.04331042079065206;
-  params.x_0[4] = 1.5717878173906188;
-  params.x_0[5] = 1.5851723557337523;
-  params.x_0[6] = -1.497658758144655;
-  params.x_0[7] = -1.171028487447253;
 
-  params.x_ss_0[0] = -1.7941311867966805;
-  params.x_ss_0[1] = -0.23676062539745413;
-  params.x_ss_0[2] = -1.8804951564857322;
-  params.x_ss_0[3] = -0.17266710242115568;
-  params.x_ss_0[4] = 0.596576190459043;
-  params.x_ss_0[5] = -0.8860508694080989;
-  params.x_ss_0[6] = 0.7050196079205251;
-  params.x_ss_0[7] = 0.3634512696654033;
-  params.u_ss_0[0] = 0.17859607212737894;
-  params.u_ss_0[1] = 1.1212590580454682;
-  params.u_ss_0[2] = -0.774545870495281;
-  params.x_ss_1[0] = 0.6136436100941447;
-  params.x_ss_1[1] = 0.2313630495538037;
-  params.x_ss_1[2] = -0.5537409477496875;
-  params.x_ss_1[3] = -1.0997819806406723;
-  params.x_ss_1[4] = -0.3739203344950055;
-  params.x_ss_1[5] = -0.12423900520332376;
-  params.x_ss_1[6] = -0.923057686995755;
-  params.x_ss_1[7] = -0.8328289030982696;
-  params.u_ss_1[0] = -0.16925440270808823;
-  params.u_ss_1[1] = 1.442135651787706;
-  params.u_ss_1[2] = 0.34501161787128565;
-  params.x_ss_2[0] = -0.8660485502711608;
-  params.x_ss_2[1] = -0.8880899735055947;
-  params.x_ss_2[2] = -0.1815116979122129;
-  params.x_ss_2[3] = -1.17835862158005;
-  params.x_ss_2[4] = -1.1944851558277074;
-  params.x_ss_2[5] = 0.05614023926976763;
-  params.x_ss_2[6] = -1.6510825248767813;
-  params.x_ss_2[7] = -0.06565787059365391;
-  params.u_ss_2[0] = -0.5512951504486665;
-  params.u_ss_2[1] = 0.8307464872626844;
-  params.u_ss_2[2] = 0.9869848924080182;
-  params.x_ss_3[0] = 0.7643716874230573;
-  params.x_ss_3[1] = 0.7567216550196565;
-  params.x_ss_3[2] = -0.5055995034042868;
-  params.x_ss_3[3] = 0.6725392189410702;
-  params.x_ss_3[4] = -0.6406053441727284;
-  params.x_ss_3[5] = 0.29117547947550015;
-  params.x_ss_3[6] = -0.6967713677405021;
-  params.x_ss_3[7] = -0.21941980294587182;
-  params.u_ss_3[0] = -1.753884276680243;
-  params.u_ss_3[1] = -1.0292983112626475;
-  params.u_ss_3[2] = 1.8864104246942706;
-  params.x_ss_4[0] = -1.077663182579704;
-  params.x_ss_4[1] = 0.7659100437893209;
-  params.x_ss_4[2] = 0.6019074328549583;
-  params.x_ss_4[3] = 0.8957565577499285;
-  params.x_ss_4[4] = -0.09964555746227477;
-  params.x_ss_4[5] = 0.38665509840745127;
-  params.x_ss_4[6] = -1.7321223042686946;
-  params.x_ss_4[7] = -1.7097514487110663;
-  params.u_ss_4[0] = -1.2040958948116867;
-  params.u_ss_4[1] = -1.3925560119658358;
-  params.u_ss_4[2] = -1.5995826216742213;
-  params.x_ss_5[0] = -1.4828245415645833;
-  params.x_ss_5[1] = 0.21311092723061398;
-  params.x_ss_5[2] = -1.248740700304487;
-  params.x_ss_5[3] = 1.808404972124833;
-  params.x_ss_5[4] = 0.7264471152297065;
-  params.x_ss_5[5] = 0.16407869343908477;
-  params.x_ss_5[6] = 0.8287224032315907;
-  params.x_ss_5[7] = -0.9444533161899464;
-  params.u_ss_5[0] = 1.7069027370149112;
-  params.u_ss_5[1] = 1.3567722311998827;
-  params.u_ss_5[2] = 0.9052779937121489;
-  params.x_ss_6[0] = -0.07904017565835986;
-  params.x_ss_6[1] = 1.3684127435065871;
-  params.x_ss_6[2] = 0.979009293697437;
-  params.x_ss_6[3] = 0.6413036255984501;
-  params.x_ss_6[4] = 1.6559010680237511;
-  params.x_ss_6[5] = 0.5346622551502991;
-  params.x_ss_6[6] = -0.5362376605895625;
-  params.x_ss_6[7] = 0.2113782926017822;
-  params.u_ss_6[0] = -1.2144776931994525;
-  params.u_ss_6[1] = -1.2317108144255875;
-  params.u_ss_6[2] = 0.9026784957312834;
-  params.x_ss_7[0] = 1.1397468137245244;
-  params.x_ss_7[1] = 1.8883934547350631;
-  params.x_ss_7[2] = 1.4038856681660068;
-  params.x_ss_7[3] = 0.17437730638329096;
-  params.x_ss_7[4] = -1.6408365219077408;
-  params.x_ss_7[5] = -0.04450702153554875;
-  params.x_ss_7[6] = 1.7117453902485025;
-  params.x_ss_7[7] = 1.1504727980139053;
-  params.u_ss_7[0] = -0.05962309578364744;
-  params.u_ss_7[1] = -0.1788825540764547;
-  params.u_ss_7[2] = -1.1280569263625857;
-  params.x_ss_8[0] = -1.2911464767927057;
-  params.x_ss_8[1] = -1.7055053231225696;
-  params.x_ss_8[2] = 1.56957275034837;
-  params.x_ss_8[3] = 0.5607064675962357;
-  params.x_ss_8[4] = -1.4266707301147146;
-  params.x_ss_8[5] = -0.3434923211351708;
-  params.x_ss_8[6] = -1.8035643024085055;
-  params.x_ss_8[7] = -1.1625066019105454;
-  params.u_ss_8[0] = 0.9228324965161532;
-  params.u_ss_8[1] = 0.6044910817663975;
-  params.u_ss_8[2] = -0.0840868104920891;
-  params.x_ss_9[0] = -0.900877978017443;
-  params.x_ss_9[1] = 0.608892500264739;
-  params.x_ss_9[2] = 1.8257980452695217;
-  params.x_ss_9[3] = -0.25791777529922877;
-  params.x_ss_9[4] = -1.7194699796493191;
-  params.x_ss_9[5] = -1.7690740487081298;
-  params.x_ss_9[6] = -1.6685159248097703;
-  params.x_ss_9[7] = 1.8388287490128845;
-  params.u_ss_9[0] = 0.16304334474597537;
-  params.u_ss_9[1] = 1.3498497306788897;
-  params.u_ss_9[2] = -1.3198658230514613;
-  params.x_ss_10[0] = -0.9586197090843394;
-  params.x_ss_10[1] = 0.7679100474913709;
-  params.x_ss_10[2] = 1.5822813125679343;
-  params.x_ss_10[3] = -0.6372460621593619;
-  params.x_ss_10[4] = -1.741307208038867;
-  params.x_ss_10[5] = 1.456478677642575;
-  params.x_ss_10[6] = -0.8365102166820959;
-  params.x_ss_10[7] = 0.9643296255982503;
-  params.u_ss_10[0] = -1.367865381194024;
-  params.u_ss_10[1] = 0.7798537405635035;
-  params.u_ss_10[2] = 1.3656784761245926;
-  params.x_ss_11[0] = 0.9086083149868371;
-  params.x_ss_11[1] = -0.5635699005460344;
-  params.x_ss_11[2] = 0.9067590059607915;
-  params.x_ss_11[3] = -1.4421315032701587;
-  params.x_ss_11[4] = -0.7447235390671119;
-  params.x_ss_11[5] = -0.32166897326822186;
-  params.x_ss_11[6] = 1.5088481557772684;
-  params.x_ss_11[7] = -1.385039165715428;
-  params.u_ss_11[0] = 1.5204991609972622;
-  params.u_ss_11[1] = 1.1958572768832156;
-  params.u_ss_11[2] = 1.8864971883119228;
-  params.x_ss_12[0] = -0.5291880667861584;
-  params.x_ss_12[1] = -1.1802409243688836;
-  params.x_ss_12[2] = -1.037718718661604;
-  params.x_ss_12[3] = 1.3114512056856835;
-  params.x_ss_12[4] = 1.8609125943756615;
-  params.x_ss_12[5] = 0.7952399935216938;
-  params.x_ss_12[6] = -0.07001183290468038;
-  params.x_ss_12[7] = -0.8518009412754686;
-  params.u_ss_12[0] = 1.3347515373726386;
-  params.u_ss_12[1] = 1.4887180335977037;
-  params.u_ss_12[2] = -1.6314736327976336;
-  params.x_ss_13[0] = -1.1362021159208933;
-  params.x_ss_13[1] = 1.327044361831466;
-  params.x_ss_13[2] = 1.3932155883179842;
-  params.x_ss_13[3] = -0.7413880049440107;
-  params.x_ss_13[4] = -0.8828216126125747;
-  params.x_ss_13[5] = -0.27673991192616;
-  params.x_ss_13[6] = 0.15778600105866714;
-  params.x_ss_13[7] = -1.6177327399735457;
-  params.u_ss_13[0] = 1.3476485548544606;
-  params.u_ss_13[1] = 0.13893948140528378;
-  params.u_ss_13[2] = 1.0998712601636944;
-  params.x_ss_14[0] = -1.0766549376946926;
-  params.x_ss_14[1] = 1.8611734044254629;
-  params.x_ss_14[2] = 1.0041092292735172;
-  params.x_ss_14[3] = -0.6276245424321543;
-  params.x_ss_14[4] = 1.794110587839819;
-  params.x_ss_14[5] = 0.8020471158650913;
-  params.x_ss_14[6] = 1.362244341944948;
-  params.x_ss_14[7] = -1.8180107765765245;
-  params.u_ss_14[0] = -1.7774338357932473;
-  params.u_ss_14[1] = 0.9709490941985153;
-  params.u_ss_14[2] = -0.7812542682064318;
-  params.x_ss_15[0] = 0.0671374633729811;
-  params.x_ss_15[1] = -1.374950305314906;
-  params.x_ss_15[2] = 1.9118096386279388;
-  params.x_ss_15[3] = 0.011004190697677885;
-  params.x_ss_15[4] = 1.3160043138989015;
-  params.x_ss_15[5] = -1.7038488148800144;
-  params.x_ss_15[6] = -0.08433819112864738;
-  params.x_ss_15[7] = -1.7508820783768964;
-  params.u_ss_15[0] = 1.536965724350949;
-  params.u_ss_15[1] = -0.21675928514816478;
-  params.u_ss_15[2] = -1.725800326952653;
-  params.x_ss_16[0] = -1.6940148707361717;
-  params.x_ss_16[1] = 0.15517063201268;
-  params.x_ss_16[2] = -1.697734381979077;
-  params.x_ss_16[3] = -1.264910727950229;
-  params.x_ss_16[4] = -0.2545716633339441;
-  params.x_ss_16[5] = -0.008868675926170244;
-  params.x_ss_16[6] = 0.3332476609670296;
-  params.x_ss_16[7] = 0.48205072561962936;
-  params.u_ss_16[0] = -0.5087540014293261;
-  params.u_ss_16[1] = 0.4749463319223195;
-  params.u_ss_16[2] = -1.371021366459455;
-  params.x_ss_17[0] = -0.8979660982652256;
-  params.x_ss_17[1] = 1.194873082385242;
-  params.x_ss_17[2] = -1.3876427970939353;
-  params.x_ss_17[3] = -1.106708108457053;
-  params.x_ss_17[4] = -1.0280872812241797;
-  params.x_ss_17[5] = -0.08197078070773234;
-  params.x_ss_17[6] = -1.9970179118324083;
-  params.x_ss_17[7] = -1.878754557910134;
-  params.u_ss_17[0] = -0.15380739340877803;
-  params.u_ss_17[1] = -1.349917260533923;
-  params.u_ss_17[2] = 0.7180072150931407;
-  params.x_ss_18[0] = 1.1808183487065538;
-  params.x_ss_18[1] = 0.31265343495084075;
-  params.x_ss_18[2] = 0.7790599086928229;
-  params.x_ss_18[3] = -0.4361679370644853;
-  params.x_ss_18[4] = -1.8148151880282066;
-  params.x_ss_18[5] = -0.24231386948140266;
-  params.x_ss_18[6] = -0.5120787511622411;
-  params.x_ss_18[7] = 0.3880129688013203;
-  params.u_ss_18[0] = -1.4631273212038676;
-  params.u_ss_18[1] = -1.0891484131126563;
-  params.u_ss_18[2] = 1.2591296661091191;
-  params.x_ss_19[0] = -0.9426978934391474;
-  params.x_ss_19[1] = -0.358719180371347;
-  params.x_ss_19[2] = 1.7438887059831263;
-  params.x_ss_19[3] = -0.8977901479165817;
-  params.x_ss_19[4] = -1.4188401645857445;
-  params.x_ss_19[5] = 0.8080805173258092;
-  params.x_ss_19[6] = 0.2682662017650985;
-  params.x_ss_19[7] = 0.44637534218638786;
-  params.d[0] = -1.214148157218884;
-  params.d[1] = 1.6818776980374155;
-  params.d[2] = -0.30341101038214635;
-  params.u_prev[0] = 1.9039816898917352;
-  params.u_prev[1] = 0.6895347036512547;
-  params.u_prev[2] = 1.6113364341535923;
-}
-
-void LinearModelPredictiveControl::load_data_penality(Params params){
+/**
+ * @brief 
+ * set penalty matrix and  #ifndef ENABLE_LQR input limits
+ */
+void load_data_penality(){
   Eigen::Vector3d q_position;
   Eigen::Vector3d q_velocity;
   Eigen::Vector2d q_attitude;
 
+  Eigen::Vector3d q_joystick_position;
+  Eigen::Vector3d q_joystick_velocity;
+  Eigen::Vector3d q_joystick_attitude;
+
   Eigen::Vector3d r_command;
   Eigen::Vector3d r_delta_command;
-  Eigen::VectorXd control_limits(5);
 
-  q_position << 40, 40, 60;
+  q_position << q_position_x_, q_position_y_, q_position_z_;
   q_velocity << 20, 20, 25;
   q_attitude << 20, 20;
 
-  r_command << 35, 35, 2;
-  r_delta_command << 0.3, 0.3, 0.0025;
+  q_joystick_position << q_joystick_x_, q_position_y_, q_position_z_;
+  q_joystick_velocity << 0, 0, 0;
+  q_joystick_attitude << 0, 0;
 
-  control_limits << 0.4363323, 0.4363323, 1.5707963, 5.0, 20.0;
+  r_command << 35, 35, 2;
+  r_delta_command << r_delta_roll_, r_delta_pitch_, r_delta_thrust_;
 
   Eigen::Matrix<double, kStateSize, kStateSize> Q;
   Eigen::Matrix<double, kStateSize, kStateSize> Q_final;
+  Eigen::Matrix<double, kStateSize, kStateSize> Q_joystick; 
   Eigen::Matrix<double, kInputSize, kInputSize> R;
   Eigen::Matrix<double, kInputSize, kInputSize> R_delta;
 
   Q.setZero();
   Q_final.setZero();
+  Q_joystick.setZero();
   R.setZero();
   R_delta.setZero();
 
   Q.block(0, 0, 3, 3) = q_position.asDiagonal();
   Q.block(3, 3, 3, 3) = q_velocity.asDiagonal();
   Q.block(6, 6, 2, 2) = q_attitude.asDiagonal();
+  Q_joystick.block(0, 0, 3, 3) = q_joystick_position.asDiagonal();
+  Q_joystick.block(3, 3, 3, 3) = q_joystick_velocity.asDiagonal();
+  Q_joystick.block(6, 6, 2, 2) = q_joystick_attitude.asDiagonal();
 
   R = r_command.asDiagonal();
 
   R_delta = r_delta_command.asDiagonal();
 
-  //Compute terminal cost
-  //Q_final(k+1) = A'*Q_final(k)*A - (A'*Q_final(k)*B)*inv(B'*Q_final(k)*B+R)*(B'*Q_final(k)*A)+ Q;
+  // //Compute terminal cost
+  // //Q_final(k+1) = A'*Q_final(k)*A - (A'*Q_final(k)*B)*inv(B'*Q_final(k)*B+R)*(B'*Q_final(k)*A)+ Q;
 
   Q_final = Q;
   for (int i = 0; i < 1000; i++) {
-    Eigen::MatrixXd temp = (model_B_.transpose() * Q_final * model_B_ + R);
-    Q_final = model_A_.transpose() * Q_final * model_A_ - (model_A_.transpose() * Q_final * model_B_) * temp.inverse() 
-                * (model_B_.transpose() * Q_final * model_A_) + Q;
+    Eigen::MatrixXd temp = (model_B.transpose() * Q_final * model_B + R);
+    Q_final = model_A.transpose() * Q_final * model_A - (model_A.transpose() * Q_final * model_B) * temp.inverse() 
+                * (model_B.transpose() * Q_final * model_A) + Q;
   }
-  Eigen::MatrixXd temporary_matrix = model_B_.transpose() * Q_final * model_B_ + R;
-  //LQR_K_ = temporary_matrix.inverse() * (model_B_.transpose() * Q_final * model_A_);
+  //lqr matrix
+  Eigen::MatrixXd temporary_matrix = model_B.transpose() * Q_final * model_B + R;
+  LQR_K = temporary_matrix.inverse() * (model_B.transpose() * Q_final * model_A);
 
   Eigen::Map<Eigen::MatrixXd>(const_cast<double*>(params.Q_x), kStateSize, kStateSize) = Q;
+  Eigen::Map<Eigen::MatrixXd>(const_cast<double*>(params.Q_x_sc), kStateSize, kStateSize) = Q_joystick;
   Eigen::Map<Eigen::MatrixXd>(const_cast<double*>(params.P), kStateSize, kStateSize) = Q_final;
   Eigen::Map<Eigen::MatrixXd>(const_cast<double*>(params.R_u), kInputSize, kInputSize) = R;
   Eigen::Map<Eigen::MatrixXd>(const_cast<double*>(params.R_delta), kInputSize, kInputSize) = R_delta * (1.0 / sampling_time_ * sampling_time_);
@@ -305,6 +96,13 @@ void LinearModelPredictiveControl::load_data_penality(Params params){
   for(int i = 0; i < kStateSize; ++i){
     for(int j = 0; j < kStateSize; ++j){
       std::cout << Q(i,j) << "\t";
+    }
+    std::cout << std::endl;
+  }
+  printf("Linear MPC: Q_x_sc:\n");
+  for(int i = 0; i < kStateSize; ++i){
+    for(int j = 0; j < kStateSize; ++j){
+      std::cout << Q_joystick(i,j) << "\t";
     }
     std::cout << std::endl;
   }
@@ -329,10 +127,23 @@ void LinearModelPredictiveControl::load_data_penality(Params params){
     }
     std::cout << std::endl;
   }
+  printf("\nLQR: K:\n");
+  for(int i = 0; i < LQR_K.rows(); ++i){
+    for(int j = 0; j < LQR_K.cols(); ++j){
+      std::cout << LQR_K(i,j) << "\t";
+    }
+    std::cout << std::endl;
+  }
 }
-void LinearModelPredictiveControl::load_data_model(Params params) {
+
+
+/**
+ * @brief 
+ * set model matrix
+ */
+void load_data_model() {
   // In this function, load all problem instance data.
-  std::vector<double> drag_coefficients = {0.010000, 0.010000, 0.0000};
+  std::vector<double> drag_coefficients = {0.0, 0.0, 0.0000};
 
   Eigen::MatrixXd A_continous_time(kStateSize, kStateSize);
   A_continous_time = Eigen::MatrixXd::Zero(kStateSize, kStateSize);
@@ -347,20 +158,22 @@ void LinearModelPredictiveControl::load_data_model(Params params) {
   A_continous_time(1, 4) = 1;
   A_continous_time(2, 5) = 1;
   A_continous_time(3, 3) = -drag_coefficients.at(0);
-  A_continous_time(3, 7) = kGravity;
+  A_continous_time(3, 7) = -kGravity;
   A_continous_time(4, 4) = -drag_coefficients.at(1);
-  A_continous_time(4, 6) = -kGravity;
+  A_continous_time(4, 6) = kGravity;
   A_continous_time(5, 5) = -drag_coefficients.at(2);
   A_continous_time(6, 6) = -1.0 / roll_time_constant_;
   A_continous_time(7, 7) = -1.0 / pitch_time_constant_;    
-  B_continous_time(5, 2) = 1.0;
+  
+  B_continous_time(5, 2) = 1;
   B_continous_time(6, 0) = roll_gain_ / roll_time_constant_;
-  B_continous_time(7, 1) = pitch_gain_ / pitch_time_constant_;     
+  B_continous_time(7, 1) = pitch_gain_ / pitch_time_constant_;  
+
   Bd_continous_time(3, 0) = 1.0;
   Bd_continous_time(4, 1) = 1.0;
   Bd_continous_time(5, 2) = 1.0;   
 
-  model_A_ = (prediction_sampling_time_ * A_continous_time).exp(); 
+  model_A = (prediction_sampling_time_ * A_continous_time).exp(); 
 
   Eigen::MatrixXd integral_exp_A;
   integral_exp_A = Eigen::MatrixXd::Zero(kStateSize, kStateSize);
@@ -370,54 +183,346 @@ void LinearModelPredictiveControl::load_data_model(Params params) {
     integral_exp_A += (A_continous_time * prediction_sampling_time_ * i / count_integral_A).exp()
         * prediction_sampling_time_ / count_integral_A;
   }    
-  model_B_ = integral_exp_A * B_continous_time;
-  model_Bd_ = integral_exp_A * Bd_continous_time;
+  model_B = integral_exp_A * B_continous_time;
+  model_Bd = integral_exp_A * Bd_continous_time;
 
-  Eigen::Map<Eigen::MatrixXd>(const_cast<double*>(params.A), kStateSize, kStateSize) = model_A_;
-  Eigen::Map<Eigen::MatrixXd>(const_cast<double*>(params.B), kStateSize, kInputSize) = model_B_;
-  Eigen::Map<Eigen::MatrixXd>(const_cast<double*>(params.Bd), kStateSize, kDisturbanceSize) = model_Bd_;
+  Eigen::Map<Eigen::MatrixXd>(const_cast<double*>(params.A), kStateSize, kStateSize) = model_A;
+  Eigen::Map<Eigen::MatrixXd>(const_cast<double*>(params.B), kStateSize, kInputSize) = model_B;
+//  Eigen::Map<Eigen::MatrixXd>(const_cast<double*>(params.Bd), kStateSize, kDisturbanceSize) = model_Bd_;
 
   std::cout << "Linear MPC: model matrix initialized correctly" << std::endl;
   printf("Linear MPC: A:\n");
   for(int i = 0; i < kStateSize; ++i){
     for(int j = 0; j < kStateSize; ++j){
-      std::cout << model_A_(i,j) << "\t";
+      std::cout << model_A(i,j) << "\t";
     }
     std::cout << std::endl;
   }
   printf("\nLinear MPC: B:\n");
   for(int i = 0; i < kStateSize; ++i){
     for(int j = 0; j < kInputSize; ++j){
-      std::cout << model_B_(i,j) << "\t";
+      std::cout << model_B(i,j) << "\t";
     }
     std::cout << std::endl;
   }
-  printf("\nLinear MPC: Bd:\n");
+/*  printf("\nLinear MPC: Bd:\n");
   for(int i = 0; i < kStateSize; ++i){
     for(int j = 0; j < kDisturbanceSize; ++j){
       std::cout << model_Bd_(i,j) << "\t";
     }
     std::cout << std::endl;
-  }
+  }*/
 }
 
-void LinearModelPredictiveControl::use_solution(Vars vars) {
-  // In this function, use the optimization result.
-  printf("\troll: %f\tpitch: %f\tthrust:%f\n",vars.u_0[0],vars.u_0[1],vars.u_0[2]);
+
+/**
+ * @brief 
+ * 计算控制量roll pitch yaw thrust 
+ */
+void LinearModelPredictiveControl::ComputeRollPitchThrustCommand(){
+  Eigen::Map<Eigen::Matrix<double, kInputSize, 1>>(const_cast<double*>(params.u_prev)) = u_prev_;
+  Eigen::Map<Eigen::Matrix<double, kStateSize, 1>>(const_cast<double*>(params.x_0)) = current_state_;
+  settings.verbose = 0;
+  tic();
+  solve(); 
+  time_ = tocq();
+  // linearized_command_roll_pitch_thrust_ = LQR_K * (target_state_ - current_state_);
+  // linearized_command_roll_pitch_thrust_ = linearized_command_roll_pitch_thrust_.cwiseMax(Eigen::Vector3d(-roll_limit_, -pitch_limit_, thrust_min_));
+  // linearized_command_roll_pitch_thrust_ = linearized_command_roll_pitch_thrust_.cwiseMin(Eigen::Vector3d(roll_limit_, pitch_limit_, thrust_max_));
+  // time_ = tocq();
+  RCLCPP_INFO(this->get_logger(),"===================Actual time taken: %g seconds.======================", time_);
+  double roll = current_yrp_W(1);
+  double pitch = current_yrp_W(2);
+  double yaw = current_yrp_W(0);
+  linearized_command_roll_pitch_thrust_ << vars.u_0[0], vars.u_0[1], vars.u_0[2];
+
+  //T_body_frame = （T_world_frame - g） / (cos(roll) * cos(pitch)), compensate the impact from roll and pitch angle.
+  command_roll_pitch_yaw_thrust_(3) = (linearized_command_roll_pitch_thrust_(2) - kGravity) / (cos(roll) * cos(pitch));
+  // double pitch_body = linearized_command_roll_pitch_thrust_(1) * (-kGravity / command_roll_pitch_yaw_thrust_(3));
+  // double roll_body = linearized_command_roll_pitch_thrust_(0) * (-kGravity / command_roll_pitch_yaw_thrust_(3));
+  // command_roll_pitch_yaw_thrust_(0) = pitch_body * sin(yaw) + roll_body * cos(yaw);
+  // command_roll_pitch_yaw_thrust_(1) = pitch_body * cos(yaw) - roll_body * sin(yaw);
+  command_roll_pitch_yaw_thrust_(0) = linearized_command_roll_pitch_thrust_(0);
+  command_roll_pitch_yaw_thrust_(1) = linearized_command_roll_pitch_thrust_(1);
+  command_roll_pitch_yaw_thrust_(2) = 0;
+  command_roll_pitch_yaw_thrust_(3) = command_roll_pitch_yaw_thrust_(3)/ (-thrust_min_ + kGravity);
+  getQuaternionFromEulerAngle(q_, command_roll_pitch_yaw_thrust_(0), command_roll_pitch_yaw_thrust_(1), 0);
+  u_prev_ << vars.u_0[0], vars.u_0[1], vars.u_0[2];
+  //yaw_rate controller
+  double yaw_error = command_roll_pitch_yaw_thrust_(2) - yaw;
+
+  if (std::abs(yaw_error) > M_PI) {
+    if (yaw_error > 0.0) {
+      yaw_error = yaw_error - 2.0 * M_PI;
+    } else {
+      yaw_error = yaw_error + 2.0 * M_PI;
+    }
+  }
+
+  //double yaw_rate_cmd = K_yaw_ * yaw_error + yaw_rate_ref_.front(); // feed-forward yaw_rate cmd
+
+  // if (yaw_rate_cmd > yaw_rate_limit_) {
+  //   yaw_rate_cmd = yaw_rate_limit_;
+  // }
+
+  // if (yaw_rate_cmd < -yaw_rate_limit_) {
+  //   yaw_rate_cmd = -yaw_rate_limit_;
+  // }
+  // getQuaternionFromEulerAngle(q_, command_roll_pitch_yaw_thrust_(0), command_roll_pitch_yaw_thrust_(1), 0);
+
 }
- //end of namespace Shared_control_mpc
+/**
+ * @brief arm
+ * 
+ */
+void LinearModelPredictiveControl::arm(){
+  publish_vehicle_command(px4_msgs::msg::VehicleCommand::VEHICLE_CMD_COMPONENT_ARM_DISARM, 1.0);
+	RCLCPP_INFO(this->get_logger(), "Arm command send");
+}
+/**
+ * @brief 
+ * 
+ */
+void LinearModelPredictiveControl::publish_vehicle_command(uint16_t command, float param1, float param2) const {
+	px4_msgs::msg::VehicleCommand msg{};
+	msg.timestamp = timestamp_.load();
+	msg.param1 = param1;
+	msg.param2 = param2;
+	msg.command = command;
+	msg.target_system = 1;
+	msg.target_component = 1;
+	msg.source_system = 1;
+	msg.source_component = 1;
+	msg.from_external = true;
+	vehicle_command_publisher_->publish(msg);
+}
+/**
+ * @brief change uavs control mode
+ * 
+ */
+void LinearModelPredictiveControl::publish_offboard_control_mode() const{
+	px4_msgs::msg::OffboardControlMode msg{};
+	msg.timestamp = timestamp_.load();
+	msg.position = false;
+	msg.velocity = false;
+	msg.acceleration = false;
+	msg.attitude = true;
+	msg.body_rate = false;
+
+	offboard_control_mode_publisher_->publish(msg);
+}
+/**
+ * @brief
+ * publisher for roll pitch yaw thrust command
+ */
+void LinearModelPredictiveControl::publish_attitude_setpoint(){
+    px4_msgs::msg::VehicleAttitudeSetpoint attitude_msg;
+    attitude_msg.timestamp = timestamp_.load();
+    attitude_msg.q_d[0] = q_.coeffs()[3];
+    attitude_msg.q_d[1] = q_.coeffs()[0];
+    attitude_msg.q_d[2] = q_.coeffs()[1];
+    attitude_msg.q_d[3] = q_.coeffs()[2];
+    attitude_msg.thrust_body[0] = 0;
+    attitude_msg.thrust_body[1] = 0;
+    attitude_msg.thrust_body[2] = command_roll_pitch_yaw_thrust_(3);
+    attitude_setpoint_pub_ -> publish(attitude_msg);
+}
+
+/**
+ * @brief initialize steady state solver
+ * 
+ * @param A 
+ * @param B 
+ */
+
+void LinearModelPredictiveControl::InitializeSteadyStateSolver(const Eigen::MatrixXd& A, const Eigen::MatrixXd& B)
+{
+  Eigen::MatrixXd left_hand_side;
+  left_hand_side.resize(kStateSize + kMeasurementSize, kStateSize + kInputSize);
+
+  Eigen::MatrixXd C(6, 8);
+  C.setIdentity();
+
+  left_hand_side << A - Eigen::MatrixXd::Identity(kStateSize, kStateSize), B, C, Eigen::MatrixXd::Zero(
+      kMeasurementSize, kInputSize);
+
+  pseudo_inverse_left_hand_side_ = (left_hand_side.transpose() * left_hand_side).inverse()
+      * left_hand_side.transpose();
+}
+/**
+ * @brief compute steady state considering disturbance(which is ignored now). 
+ *        computed state and input will be put into steadystate_state and steadystate_input
+ * @param reference 
+ * @param steadystate_state 
+ * @param steadystate_input 
+ */
+void LinearModelPredictiveControl::computeSteadyState(
+    const Eigen::Matrix<double, kMeasurementSize, 1> &reference,
+    Eigen::Matrix<double, kStateSize, 1>* steadystate_state,
+    Eigen::Matrix<double, kInputSize, 1>* steadystate_input)
+{
+
+  Eigen::Matrix<double, kStateSize + kInputSize, 1> target_state_and_input;
+  Eigen::Matrix<double, kStateSize + kMeasurementSize, 1> right_hand_side;
+
+  right_hand_side << Eigen::MatrixXd::Zero(kStateSize, 1), reference;
+
+  target_state_and_input = pseudo_inverse_left_hand_side_ * right_hand_side;
+  *steadystate_state = target_state_and_input.segment(0, kStateSize);
+  *steadystate_input = target_state_and_input.segment(kStateSize, kInputSize);
+}
+
+/**
+ * @brief publish predictied state from MPC solver for visualization
+ * 
+ */
+void LinearModelPredictiveControl::publishPredictState(){
+  trajectory_msgs::msg::MultiDOFJointTrajectory predict_state;
+  predict_state.header.frame_id = "map";
+  predict_state.header.stamp = this->now();
+  geometry_msgs::msg::PoseArray poseArray;
+  poseArray.header.frame_id = "map";
+  poseArray.header.stamp = rclcpp::Clock().now();
+  for(int i = 1; i < 6; i++){
+    trajectory_msgs::msg::MultiDOFJointTrajectoryPoint predictive_point;
+    predictive_point.transforms.resize(1);
+    predictive_point.transforms.front().translation.x = vars.x[i][0];
+    predictive_point.transforms.front().translation.y = vars.x[i][1];
+    predictive_point.transforms.front().translation.z = vars.x[i][2];
+    Quaternionf q;
+    getQuaternionFromEulerAngle(q,vars.x[i][6],vars.x[i][7],yaw_ref_);
+    predictive_point.transforms.front().rotation.w = q.w();
+    predictive_point.transforms.front().rotation.x = q.x();
+    predictive_point.transforms.front().rotation.y = q.y();
+    predictive_point.transforms.front().rotation.z = q.z();
+    geometry_msgs::msg::Pose pose;
+    pose.position.x = vars.x[i][1];
+    pose.position.y = vars.x[i][0];
+    pose.position.z = -vars.x[i][2];
+    pose.orientation.w = q.w();
+    pose.orientation.x = q.x();
+    pose.orientation.y = q.y();
+    pose.orientation.z = q.z();
+
+    poseArray.poses.push_back(pose);
+
+    predict_state.points.push_back(predictive_point);
+
+  }
+  predict_state_vis_publisher_ -> publish(poseArray);
+  predict_state_publisher_ -> publish(predict_state);
+}
+
+void LinearModelPredictiveControl::publishOdometryMarker(){
+  visualization_msgs::msg::Marker marker_msg;
+  marker_msg.type = Marker::SPHERE;
+	if(target_marker_countdown_ < MARKER_KEEPLAST) marker_msg.id = target_marker_countdown_++;
+	else marker_msg.id = target_marker_countdown_ = 0;
+  marker_msg.header.frame_id = "map";
+  marker_msg.header.stamp = this->now();
+  marker_msg.action = Marker::ADD;
+  marker_msg.scale.x = 0.1;
+  marker_msg.scale.y = 0.1;
+  marker_msg.scale.z = 0.1;
+  marker_msg.color.a = 1.0; // Don't forget to set the alpha!
+  marker_msg.color.r = 1.0;
+  marker_msg.color.g = 0.0;
+  marker_msg.color.b = 0.0;
+  marker_msg.lifetime = rclcpp::Duration(100);
+  marker_msg.pose.position.x = current_position_W(1);
+  marker_msg.pose.position.y = current_position_W(0);
+  marker_msg.pose.position.z = -current_position_W(2);
+  odom_marker_publisher_ -> publish(marker_msg);
+}
+
+/**
+ * @brief publish a static TF for visualization in rviz
+ * 
+ */  
+void LinearModelPredictiveControl::make_transforms()
+{
+  geometry_msgs::msg::TransformStamped t;
+
+  t.header.stamp = this->now();
+  t.header.frame_id = "map";
+  t.child_frame_id = "odom";
+  t.transform.translation.x = 0;
+  t.transform.translation.y = 0;
+  t.transform.translation.z = 0;
+  tf2::Quaternion q;
+  q.setRPY(0,0,0);
+  t.transform.rotation.x = q.x();
+  t.transform.rotation.y = q.y();
+  t.transform.rotation.z = q.z();
+  t.transform.rotation.w = q.w();
+  tf_static_broadcaster_->sendTransform(t);
+}
+/**
+ * @brief initialize parameters for tuning
+ * 
+ */
+void LinearModelPredictiveControl::initialize_parameters()
+{
+  input_mode_ = this-> declare_parameter("input_mode", 1);
+  q_position_x_ = this-> declare_parameter("q_position_x", 60);
+  q_position_y_ = this-> declare_parameter("q_position_y", 60);
+  q_position_z_ = this-> declare_parameter("q_position_z", 60);
+  q_joystick_x_ = this -> declare_parameter("q_joystick_x", 20);
+  q_joystick_y_ = this -> declare_parameter("q_joystick_y", 20);
+  q_joystick_z_ = this -> declare_parameter("q_joystick_z", 20);
+  r_delta_roll_ = this -> declare_parameter("r_delta_roll", 0.35);
+  r_delta_pitch_ = this -> declare_parameter("r_delta_pitch", 0.35);
+  r_delta_thrust_ = this -> declare_parameter("r_delta_thrust", 0.35);
+  roll_gain_ = this -> declare_parameter("roll_gain", 5.0);
+  pitch_gain_ = this -> declare_parameter("pitch_gain", 5.0);
+  roll_time_constant_ = this -> declare_parameter("roll_time_constant", 0.35);
+  pitch_time_constant_ = this -> declare_parameter("pitch_time_constant", 0.35);
+  RCLCPP_INFO(this->get_logger(), "parameters initiallized...");
+}
+/**
+ * @brief get parameter values from ros parameter server
+ * 
+ */
+void LinearModelPredictiveControl::get_parameters()
+{
+  input_mode_ = this -> get_parameter("input_mode").as_int();
+  q_position_x_ = this -> get_parameter("q_position_x").as_int();
+  q_position_y_ = this -> get_parameter("q_position_y").as_int();
+  q_position_z_ = this -> get_parameter("q_position_z").as_int();
+  q_joystick_x_ = this -> get_parameter("q_joystick_x").as_int();
+  q_joystick_y_ = this -> get_parameter("q_joystick_y").as_int();
+  q_joystick_z_ = this -> get_parameter("q_joystick_z").as_int();
+  r_delta_roll_ = this -> get_parameter("r_delta_roll").as_double();;
+  r_delta_pitch_ = this -> get_parameter("r_delta_pitch").as_double();;
+  r_delta_thrust_ = this -> get_parameter("r_delta_thrust").as_double();;
+  roll_gain_ = this -> get_parameter("roll_gain").as_double();
+  pitch_gain_ = this -> get_parameter("pitch_gain").as_double();
+  roll_time_constant_ = this -> get_parameter("roll_time_constant").as_double();
+  pitch_time_constant_ = this -> get_parameter("pitch_time_constant").as_double();
+  // RCLCPP_INFO(this->get_logger(),"Parameter:\nK_x: %d K_y: %d K_z: %d K_x_j: %d K_y_j: %d K_z_j: %d r_x_j: %f r_y_j: %f r_t_j: %f roll_gain: %f pitch_gain: %f roll_time_constant: %f pitch_time_constant: %f",
+  //             q_position_x_, q_position_y_, q_position_z_, q_joystick_x_, q_joystick_y_, q_joystick_z_, r_delta_roll_, r_delta_pitch_, r_delta_thrust_, roll_gain_, pitch_gain_, roll_time_constant_, pitch_time_constant_);
+}
+//--------------------------------------------------------------------------------------------------
+
+
 int main(int argc, char **argv) {
   using namespace shared_control_mpc;
-  LinearModelPredictiveControl linear_mpc_;
   set_defaults();  // Set basic algorithm parameters.
   setup_indexing();
-  linear_mpc_.load_data_model(params);
-  linear_mpc_.load_data_penality(params);
-  linear_mpc_.load_data_x_ss(params);
-  int num_iters_ ,num_test = 0;
-  num_iters_ = solve();
-  linear_mpc_.use_solution(vars);
-  #if (num_test > 0)
+  load_data_model();
+  load_data_penality();
+  rclcpp::init(argc, argv);
+
+  rclcpp::spin(std::make_shared<LinearModelPredictiveControl>());
+
+
+  /*int num_iters_ ,num_test = 0;
+  for(;;){
+    num_iters_ = solve();
+    use_solution();
+  }*/
+
+  /*#if (num_test > 0)
   settings.verbose = 0;
   tic();
   for (int i = 0; i < 20; ++i) {  // Main control loop.
@@ -435,5 +540,7 @@ int main(int argc, char **argv) {
   } else {
     printf("Actual time taken per solve: %.3g us.\n", 1e6*time_per);
   }
-  #endif
+  #endif*/
+  rclcpp::shutdown();
+  return 0;
 }

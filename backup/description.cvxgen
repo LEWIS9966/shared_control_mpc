@@ -1,4 +1,4 @@
-# Produced by CVXGEN, 2022-11-07 08:31:46 -0500.
+# Produced by CVXGEN, 2022-09-26 12:21:49 -0400.
 # CVXGEN is Copyright (C) 2006-2017 Jacob Mattingley, jem@cvxgen.com.
 # The code in this file is Copyright (C) 2006-2017 Jacob Mattingley.
 # CVXGEN, or solvers produced by CVXGEN, cannot be used for commercial
@@ -11,7 +11,7 @@ dimensions
   m = 3
   nd = 3
   nx =8
-  T = 18
+  T = 20
 end
 
 parameters
@@ -19,7 +19,6 @@ parameters
   B(nx,m)
   Bd(nx,nd)
   Q_x(nx,nx) psd
-  Q_x_sc(nx,nx) psd
   P(nx,nx) psd
   R_delta (m,m) psd
   R_u(m,m) psd
@@ -28,7 +27,6 @@ parameters
   u_max (m)
   u_min (m)
   x_ss[t](nx),t=0..T+1
-  x_sc[t](nx),t=0..T+1
   u_ss[t](m),t=0..T
 end
 
@@ -38,7 +36,7 @@ variables
 end
 
 minimize
-  quad(x[0]-x_ss[0],Q_x)+quad(u[0]-u_ss[0],R_u)+quad(u[0]-u_prev,R_delta)+sum[t=1..T](quad(x[t]-x_ss[t],Q_x)+quad(u[t]-u_ss[t],R_u)+quad(u[t]-u[t-1],R_delta) + quad(x[t]-x_sc[t],Q_x_sc))+quad(x[T+1]-x_ss[T+1],P)
+  quad(x[0]-x_ss[0],Q_x)+quad(u[0]-u_ss[0],R_u)+quad(u[0]-u_prev,R_delta)+sum[t=1..T](quad(x[t]-x_ss[t],Q_x)+quad(u[t]-u_ss[t],R_u)+quad(u[t]-u[t-1],R_delta))+quad(x[T+1]-x_ss[T+1],P)
 subject to
   x[t+1] ==A*x[t]+B*u[t],t=0..T
   u_min<=u[t]<=u_max,t=0..T

@@ -48,7 +48,7 @@
 #include <px4_msgs/msg/timesync.hpp>
 #include <px4_msgs/msg/vehicle_command.hpp>
 #include <px4_msgs/msg/vehicle_control_mode.hpp>
-#include <mav_msgs/msg/roll_pitch_yawrate_thrust.hpp>
+#include <px4_msgs/msg/vehicle_attitude_setpoint.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <stdint.h>
 
@@ -58,13 +58,12 @@
 using namespace std::chrono;
 using namespace std::chrono_literals;
 using namespace px4_msgs::msg;
-using namespace mav_msgs::msg;
 
 class OffboardControl : public rclcpp::Node {
 public:
 	OffboardControl() : Node("offboard_control") {
-		/*roll_pitch_yawrate_thrust_pub_ =
-			this->create_publisher<px4_msgs::msg::VehicleAttitudeSetpoint>("ste/attitude_setpoint/out", 10);*/
+		roll_pitch_yawrate_thrust_pub_ =
+			this->create_publisher<px4_msgs::msg::VehicleAttitudeSetpoint>("/fmu/vehicle_attitude_setpoint/in", 10);
 		offboard_control_mode_publisher_ =
 			this->create_publisher<OffboardControlMode>("fmu/offboard_control_mode/in", 10);
 		vehicle_command_publisher_ =
@@ -76,17 +75,17 @@ public:
 				[this](const px4_msgs::msg::Timesync::UniquePtr msg) {
 					timestamp_.store(msg->timestamp);
 				});
-		roll_pitch_yawrate_thrust_sub_ =
-			this->create_subscription<mav_msgs::msg::RollPitchYawrateThrust>("firefly/command/roll_pitch_yawrate_thrust", 10,
-				[this](const mav_msgs::msg::RollPitchYawrateThrust msg){
-					/*roll_ = msg.roll;
-					pitch_ = msg.pitch;
-					yaw_rate_ = msg.yaw_rate;
-					thrust_[2] = msg.thrust.z;
-					thrust_[0] = 0;
-					thrust_[1] = 0;
-					std::cout << "roll_pitch_yawrate_thrust received" << std::endl;*/
-				});
+		// roll_pitch_yawrate_thrust_sub_ =
+		// 	this->create_subscription<px4_msgs::msg::VehicleAttitudeSetpoint>("firefly/command/roll_pitch_yawrate_thrust", 10,
+		// 		[this](const px4_msgs::msg::VehicleAttitudeSetpoint msg){
+		// 			roll_ = msg.roll_body;
+		// 			pitch_ = msg.pitch_body;
+		// 			yaw_rate_ = msg.yaw_body;
+		// 			thrust_[2] = msg.thrust_body[2];
+		// 			thrust_[0] = 0;
+		// 			thrust_[1] = 0;
+		// 			std::cout << "roll_pitch_yawrate_thrust received" << std::endl;
+		// 		});
 				
 				
 		auto timer_callback = [this]() -> void {
@@ -101,7 +100,7 @@ public:
 
             		// offboard_control_mode needs to be paired with trajectory_setpoint
 			publish_offboard_control_mode();
-			//publish_attitude_setpoint();
+			publish_attitude_setpoint();
 
            		 // stop the counter after reaching 11
 			if (offboard_setpoint_counter_ < 11) {
@@ -117,10 +116,10 @@ private:
 	
 	rclcpp::Publisher<OffboardControlMode>::SharedPtr offboard_control_mode_publisher_;
 	rclcpp::Publisher<VehicleCommand>::SharedPtr vehicle_command_publisher_;
-	//rclcpp::Publisher<px4_msgs::msg::VehicleAttitudeSetpoint>::SharedPtr roll_pitch_yawrate_thrust_pub_;
+	rclcpp::Publisher<px4_msgs::msg::VehicleAttitudeSetpoint>::SharedPtr roll_pitch_yawrate_thrust_pub_;
 	
 	rclcpp::Subscription<px4_msgs::msg::Timesync>::SharedPtr timesync_sub_;
-	rclcpp::Subscription<mav_msgs::msg::RollPitchYawrateThrust>::SharedPtr roll_pitch_yawrate_thrust_sub_;
+	rclcpp::Subscription<px4_msgs::msg::VehicleAttitudeSetpoint>::SharedPtr roll_pitch_yawrate_thrust_sub_;
 
 	std::atomic<uint64_t> timestamp_;   //!< common synced timestamped
 	uint64_t offboard_setpoint_counter_;
@@ -137,7 +136,7 @@ private:
 	int shot_type_;
 	
 	void publish_offboard_control_mode() const;
-	//void publish_attitude_setpoint() const;
+	void publish_attitude_setpoint() const;
 	void publish_vehicle_command(uint16_t command, float param1 = 0.0,
 				     float param2 = 0.0) const;
 };
@@ -183,17 +182,17 @@ void OffboardControl::publish_offboard_control_mode() const {
  *        For this example, it sends a attitude setpoint to make the
  *        vehicle follow command computed from mpc.
  */
-/*void OffboardControl::publish_attitude_setpoint() const {
+void OffboardControl::publish_attitude_setpoint() const {
 	px4_msgs::msg::VehicleAttitudeSetpoint msg{};
 	msg.timestamp = timestamp_.load();
-	msg.roll_body = roll_;
-	msg.pitch_body = pitch_;
-	msg.yaw_sp_move_rate = yaw_rate_;
-	msg.thrust_body[0] = thrust_[0];
-	msg.thrust_body[1] = thrust_[1];
-	msg.thrust_body[2] = thrust_[2];
+	msg.roll_body = 0;
+	msg.pitch_body = 0;
+	msg.yaw_sp_move_rate = 0;
+	msg.thrust_body[0] = 0;
+	msg.thrust_body[1] = 0;
+	msg.thrust_body[2] = -10;
 	roll_pitch_yawrate_thrust_pub_->publish(msg);
-}*/
+}
 
 /**
  * @brief Publish vehicle commands
@@ -201,8 +200,7 @@ void OffboardControl::publish_offboard_control_mode() const {
  * @param param1    Command parameter 1
  * @param param2    Command parameter 2
  */
-void OffboardControl::publish_vehicle_command(uint16_t command, float param1,
-					      float param2) const {
+void OffboardControl::publish_vehicle_command(uint16_t command, float param1, float param2) const {
 	VehicleCommand msg{};
 	msg.timestamp = timestamp_.load();
 	msg.param1 = param1;
