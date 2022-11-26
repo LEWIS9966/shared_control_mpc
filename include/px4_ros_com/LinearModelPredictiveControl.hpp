@@ -12,6 +12,7 @@
 #include <px4_msgs/msg/vehicle_command.hpp>
 #include <px4_msgs/msg/vehicle_control_mode.hpp>
 #include <mav_msgs/msg/joystick.hpp>
+#include <nav_msgs/msg/odometry.hpp>
 #include <trajectory_msgs/msg/multi_dof_joint_trajectory.hpp>
 #include <geometry_msgs/msg/pose_stamped.hpp>
 #include <visualization_msgs/msg/marker.hpp>
@@ -22,6 +23,7 @@
 #include <rclcpp/rclcpp.hpp>
 #include <chrono>
 #include <stdint.h>
+#include <string>
 
 #include <px4_ros_com/mpc_queue.hpp>
 
@@ -49,26 +51,28 @@ static constexpr double pitch_limit_ = M_PI / 8.0;
 static constexpr double yaw_rate_limit_ = M_PI_2;
 static constexpr double thrust_max_ = 1;
 static constexpr double thrust_min_ = -4.064121;
+static constexpr double K_yaw_ = 0.35;
 
-int input_mode_ = 1;
-int q_position_x_ = 60;
-int q_position_y_ = 60;
-int q_position_z_ = 60;
-int q_joystick_x_ = 20;
-int q_joystick_y_ = 20;
-int q_joystick_z_ = 20;
-float roll_gain_ = 5.0; //0.9Tmsg
-float pitch_gain_ = 5.0; //0.9
+int input_mode_ = 2;
+int q_position_x_ = 30;
+int q_position_y_ = 30;
+int q_position_z_ = 30;
+int q_joystick_x_ = 30;
+int q_joystick_y_ = 30;
+int q_joystick_z_ = 30;
+float roll_gain_ = 6.5; //0.9Tmsg
+float pitch_gain_ = 6.5; //0.9
 float roll_time_constant_ = 0.35; //0.25
 float pitch_time_constant_ = 0.35; //0.255
-float r_delta_roll_ = 1.0; //0.255
-float r_delta_pitch_ = 1.0; //0.255
-float r_delta_thrust_ = 1.0; //0.255
+float r_delta_roll_ = 300; //0.255
+float r_delta_pitch_ = 300; //0.255
+float r_delta_thrust_ = 300; //0.255
 
 class LinearModelPredictiveControl : public rclcpp :: Node {
 private:
         //Subscribers and publisher
         rclcpp::Subscription<px4_msgs::msg::VehicleOdometry>::SharedPtr vehicle_position_sub_;
+        // rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr vehicle_position_sub_;
         rclcpp::Subscription<trajectory_msgs::msg::MultiDOFJointTrajectory>::SharedPtr trajectory_command_sub_;
         rclcpp::Subscription<px4_msgs::msg::Timesync>::SharedPtr timesync_sub_;
         rclcpp::Subscription<mav_msgs::msg::Joystick>::SharedPtr joystick_sub_;
@@ -80,6 +84,7 @@ private:
         rclcpp::Publisher<geometry_msgs::msg::PoseArray>::SharedPtr predict_state_vis_publisher_;
         rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr target_marker_publisher_;
         rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr odom_marker_publisher_;
+        rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr ref_marker_publisher_;
         rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr odom_publisher_;
 
         std::shared_ptr<tf2_ros::StaticTransformBroadcaster> tf_static_broadcaster_;
@@ -88,7 +93,7 @@ private:
         px4_msgs::msg::VehicleOdometry current_odometry_msg_;
         px4_msgs::msg::VehicleAttitudeSetpoint command_attitude_thrust_;
         Eigen::Vector3d current_position_W; 
-        Eigen::Vector3d current_yrp_W; //current yaw roll pitch ()
+        Eigen::Vector3d current_rpy_W; //current yaw roll pitch ()
         Eigen::Vector2d roll_pitch_inertial_frame_;
         Eigen::Vector3d current_velocity_W; 
         trajectory_msgs::msg::MultiDOFJointTrajectory trajectory_msgs_;
@@ -109,7 +114,6 @@ private:
         //system model matrix
         Eigen::Matrix<double, kStateSize, kStateSize> model_A_;   
         Eigen::Matrix<double, kStateSize, kInputSize> model_B_;
-        double K_yaw_;
         double yaw_ref_;
         float joystick_x_;
         float joystick_y_;
@@ -155,7 +159,8 @@ public:
                         this->create_publisher<geometry_msgs::msg::PoseStamped>("sc/vehicle_odom_vis",10);
                 odom_marker_publisher_ = 
                         this->create_publisher<visualization_msgs::msg::Marker>("sc/vehicle_odom_marker",10);
-                
+                ref_marker_publisher_ = 
+                        this->create_publisher<visualization_msgs::msg::Marker>("sc/refence_setpoint_marker",10);
                 
                 timesync_sub_ =
 			this->create_subscription<Timesync>("fmu/timesync/out", 10,
@@ -176,13 +181,13 @@ public:
                 	this -> create_subscription<px4_msgs::msg::VehicleOdometry>("fmu/vehicle_odometry/out", 10, 
                                 [this](const px4_msgs::msg::VehicleOdometry::UniquePtr msg){
                                         Eigen::Vector4d quaternion;
-                                        quaternion << msg -> q[0], msg -> q[1], msg -> q[2], msg -> q[3];
-                                        getEulerAnglesFromQuaternion(quaternion,&current_yrp_W);
-                                        double roll_W = current_yrp_W(2);
-                                        double pitch_W = -current_yrp_W(1);
-                                        double yaw_W = current_yrp_W(3);
-                                        roll_pitch_inertial_frame_ << -sin(yaw_W) * pitch_W + cos(yaw_W) * roll_W, cos(yaw_W) * pitch_W + sin(yaw_W) * roll_W;
-                                        current_position_W << msg -> x, msg -> y, msg -> z;
+                                        quaternion << msg -> q[1], msg -> q[2], msg -> q[3], msg -> q[0]; 
+                                        getEulerAnglesFromQuaternion(quaternion, &current_rpy_W);
+                                        double roll_W = current_rpy_W(0);
+                                        double pitch_W = current_rpy_W(1);
+                                        double yaw_W = current_rpy_W(2);
+                                        roll_pitch_inertial_frame_ << -sin(yaw_W) * pitch_W + cos(yaw_W) * roll_W, cos(yaw_W) * pitch_W + sin(yaw_W) * roll_W;//世界坐标系
+                                        current_position_W << msg -> x + 0.98, msg -> y + 1, msg -> z;
                                         current_velocity_W << msg -> vx, msg -> vy, msg -> vz;
                                         current_state_ << current_position_W, current_velocity_W, roll_pitch_inertial_frame_;
                                         geometry_msgs::msg::PoseStamped pose;
@@ -203,28 +208,37 @@ public:
                                 [this](const trajectory_msgs::msg::MultiDOFJointTrajectory::UniquePtr trajectory_msg){
                                         CVXGEN_queue_.clear();
                                         CVXGEN_queue_joystick_.clear();
+                                        
+                                        // #ifndef LQR_SOLVER
                                         //摇杆偏移量
                                         MultiDOFJointTrajectoryPoint joystick_point;
                                         joystick_point.transforms.resize(1);
-                                        joystick_point.transforms.front().translation.x = trajectory_msg->points[0].transforms.front().translation.x + (joystick_x_ * 5);
-                                        joystick_point.transforms.front().translation.y = trajectory_msg->points[0].transforms.front().translation.y + (joystick_y_ * 5);
+                                        joystick_point.transforms.front().translation.x = trajectory_msg->points[0].transforms.front().translation.x + (joystick_y_ * 2) * cos(yaw_ref_ - 1.5706) - (joystick_x_ * 2) * sin(yaw_ref_ - 1.5706);
+                                        joystick_point.transforms.front().translation.y = trajectory_msg->points[0].transforms.front().translation.y + (joystick_y_ * 2) * sin(yaw_ref_ - 1.5706) + (joystick_x_ * 2) * cos(yaw_ref_ - 1.5706);
                                         joystick_point.transforms.front().translation.z = trajectory_msg->points[0].transforms.front().translation.z;
+                                        // #endif
+
+
                                         //x_ss[t]赋值
                                         mpc_queue_.fillQueueWithPoint(trajectory_msg->points[0]);
                                         mpc_queue_.fillQueueWithJoystickPoint(joystick_point, input_mode_);
                                         Vector3dDeque position_ref, velocity_ref, acceleration_ref;
                                         std::deque<double> yaw_ref, yaw_rate_ref;
+
+
+                                        //获取yaw控制量
                                         Eigen::Vector4d q;
-                                        q <<  trajectory_msg->points.front().transforms.front().rotation.w
-                                             ,trajectory_msg->points.front().transforms.front().rotation.x
+                                        q <<  trajectory_msg->points.front().transforms.front().rotation.x
                                              ,trajectory_msg->points.front().transforms.front().rotation.y
-                                             ,trajectory_msg->points.front().transforms.front().rotation.z;
-                                        
+                                             ,trajectory_msg->points.front().transforms.front().rotation.z
+                                             ,trajectory_msg->points.front().transforms.front().rotation.w;
                                         Eigen::Vector3d angle_ref;
                                         getEulerAnglesFromQuaternion(q, &angle_ref);
                                         yaw_ref_ = angle_ref(2);
-                                        Vector3dDeque position_joystick;
+                                        printf("yaw_ref: %f\n",yaw_ref_);
 
+
+                                        Vector3dDeque position_joystick;
                                         mpc_queue_.getQueue(position_ref, velocity_ref, acceleration_ref, yaw_ref, yaw_rate_ref);
                                         mpc_queue_.getJoystickQueue(position_joystick);
                                         //
@@ -273,8 +287,11 @@ public:
                                 get_parameters();
             		        // offboard_control_mode needs to be paired with trajectory_setpoint
                                 ComputeRollPitchThrustCommand();
-                                publishPredictState();
-                                publishOdometryMarker();
+                                // publishPredictState();
+                                string ns1 = "odom";
+                                string ns2 = "reference";
+                                publishPositionMarker(ns1, current_position_W(0), current_position_W(1), -current_position_W(2));
+                                publishPositionMarker(ns2, params.x_sc_1[0], params.x_sc_1[1], -params.x_sc_1[2]);
 			        publish_offboard_control_mode();
 			        publish_attitude_setpoint();
 
@@ -285,12 +302,12 @@ public:
                                                 RCLCPP_INFO(this->get_logger(),"Odometry messages received: \n\t\t\t\t\t\t\t\tpos_x: %g\tpos_y: %g\tpos_z: %g\n\t\t\t\t\t\t\t\tvel_x: %g\tvel_y: %g\tvel_z: %g\n\t\t\t\t\t\t\t\troll: %g\tpitch: %g\tyaw: %g",
                                                                 current_position_W(0),current_position_W(1),current_position_W(2),
                                                                 current_velocity_W(0),current_velocity_W(1),current_velocity_W(2), 
-                                                                current_yrp_W(1),current_yrp_W(2),current_yrp_W(0));
-                                                RCLCPP_INFO(this->get_logger(), "Trajectory messages received, set state references: \n\t\t\t\t\t\t\t\tpos_x: %g\tpos_y: %g\tpos_z: %g\n\t\t\t\t\t\t\t\tjoystick_x: %g\tjoystick_y: %g\tjoystick_z: %g\n\t\t\t\t\t\t\t\tvel_x: %g\tvel_y: %g\tvel_z: %g\n\t\t\t\t\t\t\t\troll_ref: %g\tpitch_ref: %g", 
+                                                                current_rpy_W(0),current_rpy_W(1),current_rpy_W(2));
+                                                RCLCPP_INFO(this->get_logger(), "Trajectory messages received, set state references: \n\t\t\t\t\t\t\t\tpos_x: %g\tpos_y: %g\tpos_z: %g\n\t\t\t\t\t\t\t\tjoystick_x: %g\tjoystick_y: %g\tjoystick_z: %g\n\t\t\t\t\t\t\t\tvel_x: %g\tvel_y: %g\tvel_z: %g\n\t\t\t\t\t\t\t\troll_ref: %g\tpitch_ref: %g\tyaw_ref: %g", 
                                                                       params.x_ss_0[0],params.x_ss_0[1],params.x_ss_0[2],
                                                                       params.x_sc_1[0],params.x_sc_1[1],params.x_sc_1[2],
                                                                       params.x_ss_0[3],params.x_ss_0[4],params.x_ss_0[5],
-                                                                      params.x_ss_0[6],params.x_ss_0[7]);
+                                                                      params.x_ss_0[6],params.x_ss_0[7], yaw_ref_);
                                                 RCLCPP_INFO(this->get_logger(), "previous input: roll_prev: %g\tpitch: %g\tthrust: %g", params.u_prev[0], params.u_prev[1], params.u_prev[2]);
                                                 RCLCPP_INFO(this->get_logger(), "current input: roll: %g\tpitch: %g\tthrust: %g", command_roll_pitch_yaw_thrust_(0), command_roll_pitch_yaw_thrust_(1), command_roll_pitch_yaw_thrust_(3));
                                                 RCLCPP_INFO(this->get_logger(), "Quaternion:   %.6f   %.6f   %.6f   %.6f", q_.coeffs()(0),q_.coeffs()(1),q_.coeffs()(2),q_.coeffs()(3));
@@ -300,11 +317,11 @@ public:
                                 }
 
            		        // stop the counter after reaching 11
-			        if (offboard_setpoint_counter_ < 11) {
+			        if (offboard_setpoint_counter_ < 21) {
 				        offboard_setpoint_counter_++;
 			        }
                 	};
-                timer_ = this -> create_wall_timer(20ms, timer_callback);
+                timer_ = this -> create_wall_timer(1ms, timer_callback);
         };
 
         //void set_reference(const trajectory_msgs::msg::MultiDOFJointTrajectory trajectory_msg);
@@ -318,8 +335,9 @@ public:
         {
                 assert(euler_angles != NULL);
                 *euler_angles << std::atan2(2.0 * (q.w() * q.x() + q.y() * q.z()), 1.0 - 2.0 * (q.x() * q.x() + q.y() * q.y())),
-                        std::asin(2.0 * (q.w() * q.y() - q.z() * q.x())),
-                        std::atan2(2.0 * (q.w() * q.z() + q.x() * q.y()), 1.0 - 2.0 * (q.y() * q.y() + q.z() * q.z()));
+                                 std::asin(2.0 * (q.w() * q.y() - q.z() * q.x())),
+                                 std::atan2(2.0 * (q.w() * q.z() + q.x() * q.y()), 1.0 - 2.0 * (q.y() * q.y() + q.z() * q.z()));
+                
         }
         void inline getQuaternionFromEulerAngle(Quaternionf &q, const float roll, const float pitch, const float yaw)
         {
@@ -339,7 +357,7 @@ public:
         void ComputeRollPitchThrustCommand();
         Eigen::Vector3d calculateVelocity(const Eigen::Vector3d &current_position, const Eigen::Vector3d &previous_position);
         void publishPredictState();
-        void publishOdometryMarker();
+        void publishPositionMarker(string ns, const double x, const double y, const double z);
         void make_transforms();
         void initialize_parameters();
         void get_parameters();

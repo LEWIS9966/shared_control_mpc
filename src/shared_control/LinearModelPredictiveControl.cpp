@@ -1,7 +1,7 @@
 #include <px4_ros_com/LinearModelPredictiveControl.hpp>
 #include <fstream>
-#define MARKER_KEEPLAST 700
-
+#define MARKER_KEEPLAST 1500
+// #define LQR_SOLVER
 
 using namespace shared_control_mpc;
 Vars vars;
@@ -38,7 +38,7 @@ void load_data_penality(){
   q_joystick_velocity << 0, 0, 0;
   q_joystick_attitude << 0, 0;
 
-  r_command << 35, 35, 2;
+  r_command << 0, 0, 0;
   r_delta_command << r_delta_roll_, r_delta_pitch_, r_delta_thrust_;
 
   Eigen::Matrix<double, kStateSize, kStateSize> Q;
@@ -222,42 +222,58 @@ void load_data_model() {
 void LinearModelPredictiveControl::ComputeRollPitchThrustCommand(){
   Eigen::Map<Eigen::Matrix<double, kInputSize, 1>>(const_cast<double*>(params.u_prev)) = u_prev_;
   Eigen::Map<Eigen::Matrix<double, kStateSize, 1>>(const_cast<double*>(params.x_0)) = current_state_;
+  #ifndef LQR_SOLVER
   settings.verbose = 0;
   tic();
   solve(); 
   time_ = tocq();
-  // linearized_command_roll_pitch_thrust_ = LQR_K * (target_state_ - current_state_);
-  // linearized_command_roll_pitch_thrust_ = linearized_command_roll_pitch_thrust_.cwiseMax(Eigen::Vector3d(-roll_limit_, -pitch_limit_, thrust_min_));
-  // linearized_command_roll_pitch_thrust_ = linearized_command_roll_pitch_thrust_.cwiseMin(Eigen::Vector3d(roll_limit_, pitch_limit_, thrust_max_));
-  // time_ = tocq();
+  #endif
+  #ifdef LQR_SOLVER
+  linearized_command_roll_pitch_thrust_ = LQR_K * (target_state_ - current_state_);
+  linearized_command_roll_pitch_thrust_ = linearized_command_roll_pitch_thrust_.cwiseMax(Eigen::Vector3d(-roll_limit_, -pitch_limit_, thrust_min_));
+  linearized_command_roll_pitch_thrust_ = linearized_command_roll_pitch_thrust_.cwiseMin(Eigen::Vector3d(roll_limit_, pitch_limit_, thrust_max_));
+  time_ = tocq();
+  #endif
+
   RCLCPP_INFO(this->get_logger(),"===================Actual time taken: %g seconds.======================", time_);
-  double roll = current_yrp_W(1);
-  double pitch = current_yrp_W(2);
-  double yaw = current_yrp_W(0);
+
+  //radians
+  double roll = current_rpy_W(0);
+  double pitch = current_rpy_W(1);
+  double yaw = current_rpy_W(2);
+  //此处是世界坐标系下的rpy
   linearized_command_roll_pitch_thrust_ << vars.u_0[0], vars.u_0[1], vars.u_0[2];
 
-  //T_body_frame = （T_world_frame - g） / (cos(roll) * cos(pitch)), compensate the impact from roll and pitch angle.
+  //T_body = （T_world_frame - g） / (cos(roll) * cos(pitch)), compensate the impact from roll and pitch angle.
   command_roll_pitch_yaw_thrust_(3) = (linearized_command_roll_pitch_thrust_(2) - kGravity) / (cos(roll) * cos(pitch));
-  // double pitch_body = linearized_command_roll_pitch_thrust_(1) * (-kGravity / command_roll_pitch_yaw_thrust_(3));
-  // double roll_body = linearized_command_roll_pitch_thrust_(0) * (-kGravity / command_roll_pitch_yaw_thrust_(3));
-  // command_roll_pitch_yaw_thrust_(0) = pitch_body * sin(yaw) + roll_body * cos(yaw);
-  // command_roll_pitch_yaw_thrust_(1) = pitch_body * cos(yaw) - roll_body * sin(yaw);
-  command_roll_pitch_yaw_thrust_(0) = linearized_command_roll_pitch_thrust_(0);
-  command_roll_pitch_yaw_thrust_(1) = linearized_command_roll_pitch_thrust_(1);
-  command_roll_pitch_yaw_thrust_(2) = 0;
-  command_roll_pitch_yaw_thrust_(3) = command_roll_pitch_yaw_thrust_(3)/ (-thrust_min_ + kGravity);
-  getQuaternionFromEulerAngle(q_, command_roll_pitch_yaw_thrust_(0), command_roll_pitch_yaw_thrust_(1), 0);
-  u_prev_ << vars.u_0[0], vars.u_0[1], vars.u_0[2];
-  //yaw_rate controller
-  double yaw_error = command_roll_pitch_yaw_thrust_(2) - yaw;
 
-  if (std::abs(yaw_error) > M_PI) {
-    if (yaw_error > 0.0) {
-      yaw_error = yaw_error - 2.0 * M_PI;
-    } else {
-      yaw_error = yaw_error + 2.0 * M_PI;
-    }
-  }
+  // double roll_body = linearized_command_roll_pitch_thrust_(0) * (-kGravity / command_roll_pitch_yaw_thrust_(3));
+  // double pitch_body = linearized_command_roll_pitch_thrust_(1) * (-kGravity / command_roll_pitch_yaw_thrust_(3));
+
+  double pitch_body = linearized_command_roll_pitch_thrust_(1);
+  double roll_body = linearized_command_roll_pitch_thrust_(0);
+  double pitch_body_trans = pitch_body * cos(yaw) + roll_body * sin(yaw);
+  double roll_body_trans = pitch_body * sin(yaw) + roll_body * cos(yaw);
+  // printf("before transformed  roll: %f  pitch: %f    yaw: %f\n", roll_body, pitch_body, yaw / M_PI * 180);
+  // printf("after transformed  roll: %f  pitch: %f\n", roll_body_trans, pitch_body_trans);
+
+  command_roll_pitch_yaw_thrust_(0) = roll_body;
+  command_roll_pitch_yaw_thrust_(1) = pitch_body;
+  command_roll_pitch_yaw_thrust_(2) = yaw_ref_;
+  command_roll_pitch_yaw_thrust_(3) = command_roll_pitch_yaw_thrust_(3)/ (-thrust_min_ + kGravity);
+  getQuaternionFromEulerAngle(q_, command_roll_pitch_yaw_thrust_(0), command_roll_pitch_yaw_thrust_(1), command_roll_pitch_yaw_thrust_(2));
+  u_prev_ << vars.u_0[0], vars.u_0[1], vars.u_0[2];
+
+  // //yaw_rate controller
+  // double yaw_error = command_roll_pitch_yaw_thrust_(2) - yaw;
+
+  // if (std::abs(yaw_error) > M_PI) {
+  //   if (yaw_error > 0.0) {
+  //     yaw_error = yaw_error - 2.0 * M_PI;
+  //   } else {
+  //     yaw_error = yaw_error + 2.0 * M_PI;
+  //   }
+  // }
 
   //double yaw_rate_cmd = K_yaw_ * yaw_error + yaw_rate_ref_.front(); // feed-forward yaw_rate cmd
 
@@ -268,7 +284,7 @@ void LinearModelPredictiveControl::ComputeRollPitchThrustCommand(){
   // if (yaw_rate_cmd < -yaw_rate_limit_) {
   //   yaw_rate_cmd = -yaw_rate_limit_;
   // }
-  // getQuaternionFromEulerAngle(q_, command_roll_pitch_yaw_thrust_(0), command_roll_pitch_yaw_thrust_(1), 0);
+  // getQuaternionFromEulerAngle(q_, command_roll_pitch_yaw_thrust_(0), command_roll_pitch_yaw_thrust_(1), command_roll_pitch_yaw_thrust_(2));
 
 }
 /**
@@ -413,8 +429,9 @@ void LinearModelPredictiveControl::publishPredictState(){
   predict_state_publisher_ -> publish(predict_state);
 }
 
-void LinearModelPredictiveControl::publishOdometryMarker(){
+void LinearModelPredictiveControl::publishPositionMarker(string ns, const double x, const double y, const double z){
   visualization_msgs::msg::Marker marker_msg;
+  marker_msg.ns = ns;
   marker_msg.type = Marker::SPHERE;
 	if(target_marker_countdown_ < MARKER_KEEPLAST) marker_msg.id = target_marker_countdown_++;
 	else marker_msg.id = target_marker_countdown_ = 0;
@@ -424,15 +441,24 @@ void LinearModelPredictiveControl::publishOdometryMarker(){
   marker_msg.scale.x = 0.1;
   marker_msg.scale.y = 0.1;
   marker_msg.scale.z = 0.1;
-  marker_msg.color.a = 1.0; // Don't forget to set the alpha!
-  marker_msg.color.r = 1.0;
-  marker_msg.color.g = 0.0;
-  marker_msg.color.b = 0.0;
-  marker_msg.lifetime = rclcpp::Duration(100);
-  marker_msg.pose.position.x = current_position_W(1);
-  marker_msg.pose.position.y = current_position_W(0);
-  marker_msg.pose.position.z = -current_position_W(2);
-  odom_marker_publisher_ -> publish(marker_msg);
+  if(ns == "odom"){
+    marker_msg.color.a = 1.0; 
+    marker_msg.color.r = 1.0;
+    marker_msg.color.g = 0.0;
+    marker_msg.color.b = 0.0;
+  }
+  else{
+    marker_msg.color.a = 1.0; 
+    marker_msg.color.r = 0.0;
+    marker_msg.color.g = 0.0;
+    marker_msg.color.b = 1.0;
+  }
+  marker_msg.lifetime = rclcpp::Duration(0);
+  marker_msg.pose.position.x = x;
+  marker_msg.pose.position.y = y;
+  marker_msg.pose.position.z = z;
+  if(ns == "odom") odom_marker_publisher_ -> publish(marker_msg);
+  else ref_marker_publisher_ -> publish(marker_msg);
 }
 
 /**
@@ -470,11 +496,11 @@ void LinearModelPredictiveControl::initialize_parameters()
   q_joystick_x_ = this -> declare_parameter("q_joystick_x", 20);
   q_joystick_y_ = this -> declare_parameter("q_joystick_y", 20);
   q_joystick_z_ = this -> declare_parameter("q_joystick_z", 20);
-  r_delta_roll_ = this -> declare_parameter("r_delta_roll", 0.35);
-  r_delta_pitch_ = this -> declare_parameter("r_delta_pitch", 0.35);
-  r_delta_thrust_ = this -> declare_parameter("r_delta_thrust", 0.35);
-  roll_gain_ = this -> declare_parameter("roll_gain", 5.0);
-  pitch_gain_ = this -> declare_parameter("pitch_gain", 5.0);
+  r_delta_roll_ = this -> declare_parameter("r_delta_roll", 10.0);
+  r_delta_pitch_ = this -> declare_parameter("r_delta_pitch", 10.0);
+  r_delta_thrust_ = this -> declare_parameter("r_delta_thrust", 1.0);
+  roll_gain_ = this -> declare_parameter("roll_gain", 8.5);
+  pitch_gain_ = this -> declare_parameter("pitch_gain", 8.5);
   roll_time_constant_ = this -> declare_parameter("roll_time_constant", 0.35);
   pitch_time_constant_ = this -> declare_parameter("pitch_time_constant", 0.35);
   RCLCPP_INFO(this->get_logger(), "parameters initiallized...");
@@ -499,8 +525,8 @@ void LinearModelPredictiveControl::get_parameters()
   pitch_gain_ = this -> get_parameter("pitch_gain").as_double();
   roll_time_constant_ = this -> get_parameter("roll_time_constant").as_double();
   pitch_time_constant_ = this -> get_parameter("pitch_time_constant").as_double();
-  // RCLCPP_INFO(this->get_logger(),"Parameter:\nK_x: %d K_y: %d K_z: %d K_x_j: %d K_y_j: %d K_z_j: %d r_x_j: %f r_y_j: %f r_t_j: %f roll_gain: %f pitch_gain: %f roll_time_constant: %f pitch_time_constant: %f",
-  //             q_position_x_, q_position_y_, q_position_z_, q_joystick_x_, q_joystick_y_, q_joystick_z_, r_delta_roll_, r_delta_pitch_, r_delta_thrust_, roll_gain_, pitch_gain_, roll_time_constant_, pitch_time_constant_);
+  RCLCPP_INFO(this->get_logger(),"Parameter:\nK_x: %d K_y: %d K_z: %d K_x_j: %d K_y_j: %d K_z_j: %d r_x_j: %f r_y_j: %f r_t_j: %f roll_gain: %f pitch_gain: %f roll_time_constant: %f pitch_time_constant: %f",
+              q_position_x_, q_position_y_, q_position_z_, q_joystick_x_, q_joystick_y_, q_joystick_z_, r_delta_roll_, r_delta_pitch_, r_delta_thrust_, roll_gain_, pitch_gain_, roll_time_constant_, pitch_time_constant_);
 }
 //--------------------------------------------------------------------------------------------------
 

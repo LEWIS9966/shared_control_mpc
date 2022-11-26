@@ -48,6 +48,8 @@
 #include <px4_msgs/msg/timesync.hpp>
 #include <px4_msgs/msg/vehicle_command.hpp>
 #include <px4_msgs/msg/vehicle_control_mode.hpp>
+#include <mav_msgs/msg/joystick.hpp>
+#include <trajectory_msgs/msg/multi_dof_joint_trajectory.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <stdint.h>
 
@@ -70,11 +72,11 @@ public:
 			this->create_publisher<VehicleCommand>("fmu/vehicle_command/in", 10);
 #else
 		offboard_control_mode_publisher_ =
-			this->create_publisher<OffboardControlMode>("fmu/offboard_control_mode/in");
+			this->create_publisher<OffboardControlMode>("fmu/offboard_control_mode/in",10);
 		trajectory_setpoint_publisher_ =
-			this->create_publisher<TrajectorySetpoint>("fmu/trajectory_setpoint/in");
+			this->create_publisher<TrajectorySetpoint>("fmu/trajectory_setpoint/in",10);
 		vehicle_command_publisher_ =
-			this->create_publisher<VehicleCommand>("fmu/vehicle_command/in");
+			this->create_publisher<VehicleCommand>("fmu/vehicle_command/in",10);
 #endif
 
 		// get common timestamp
@@ -82,6 +84,21 @@ public:
 			this->create_subscription<px4_msgs::msg::Timesync>("fmu/timesync/out", 10,
 				[this](const px4_msgs::msg::Timesync::UniquePtr msg) {
 					timestamp_.store(msg->timestamp);
+				});
+		trajectory_command_sub_ = 
+            this -> create_subscription<trajectory_msgs::msg::MultiDOFJointTrajectory>("/sc/trajectory_setpoint", 1, 
+                [this](const trajectory_msgs::msg::MultiDOFJointTrajectory::UniquePtr trajectory_msg){
+					trajectory_setpoint_x_ = trajectory_msg->points[0].transforms[0].translation.x;
+					trajectory_setpoint_y_ = trajectory_msg->points[0].transforms[0].translation.y;
+				});
+		joystick_input_sub_ = 
+			this -> create_subscription<mav_msgs::msg::Joystick>("/sc/joystick_input", 10,
+				[this](const mav_msgs::msg::Joystick::SharedPtr msg) {
+					if(abs(msg -> lx) > 0.7) joystick_x_ = msg->lx; 
+					else joystick_x_ = 0.00000;
+					if(abs(msg -> ly) > 0.7) joystick_y_ = -msg->ly;
+					else joystick_y_ = 0.00000;
+					return;
 				});
 
 		offboard_setpoint_counter_ = 0;
@@ -118,8 +135,13 @@ private:
 	rclcpp::Publisher<TrajectorySetpoint>::SharedPtr trajectory_setpoint_publisher_;
 	rclcpp::Publisher<VehicleCommand>::SharedPtr vehicle_command_publisher_;
 	rclcpp::Subscription<px4_msgs::msg::Timesync>::SharedPtr timesync_sub_;
+	rclcpp::Subscription<trajectory_msgs::msg::MultiDOFJointTrajectory>::SharedPtr trajectory_command_sub_;
+	rclcpp::Subscription<mav_msgs::msg::Joystick>::SharedPtr joystick_input_sub_;
 
 	std::atomic<uint64_t> timestamp_;   //!< common synced timestamped
+
+	float trajectory_setpoint_x_, trajectory_setpoint_y_;
+	float joystick_x_, joystick_y_;
 
 	uint64_t offboard_setpoint_counter_;   //!< counter for the number of setpoints sent
 
@@ -172,10 +194,10 @@ void OffboardControl::publish_offboard_control_mode() const {
 void OffboardControl::publish_trajectory_setpoint() const {
 	TrajectorySetpoint msg{};
 	msg.timestamp = timestamp_.load();
-	msg.x = 0.0;
-	msg.y = 0.0;
-	msg.z = -5.0;
-	msg.yaw = -3.14; // [-PI:PI]
+	msg.x = 10.0;
+	msg.y = 0;
+	msg.z = -3.5;
+	msg.yaw = 0; // [-PI:PI]
 
 	trajectory_setpoint_publisher_->publish(msg);
 }
