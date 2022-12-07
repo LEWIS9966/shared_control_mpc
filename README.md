@@ -1,6 +1,6 @@
 # Shared control MPC
 
-This project is based on [PX4_Autopilot](https://github.com/PX4/PX4-Autopilot) and implements a MPC controller on a iris accepting user input via joystick on flight. To begin with this project, you have to ensure the enviromental dependency:
+This project is based on [PX4_Autopilot](https://github.com/PX4/PX4-Autopilot) and implements a MPC controller on a iris accepting user input via joystick on flight. To begin with this project, you have to ensure the enviromental dependencies have been installed:
 
 1. ROS2 FOXY
 2. PX4-ROS2 bridge
