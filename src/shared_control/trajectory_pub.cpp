@@ -21,8 +21,9 @@
 
 #define JOYSTICK_RANGE 5.0
 #define MARKER_KEEPLAST 700
-#define SHOT_TYPE 0
-// #define PID
+
+//defines the shot type(0: lateral tracking shot, 1: ORBOT)
+#define SHOT_TYPE 1
 
 using namespace std::chrono;
 using namespace std::chrono_literals;
@@ -46,12 +47,13 @@ public:
 		trajectory_setpoint_publisher_ =
 			this->create_publisher<TrajectorySetpoint>("fmu/trajectory_setpoint/in",10);
 
-
+		//subscriber
 		timesync_sub_ =
 			this->create_subscription<px4_msgs::msg::Timesync>("fmu/timesync/out", 10,
 				[this](const px4_msgs::msg::Timesync::UniquePtr msg) {
 					timestamp_.store(msg->timestamp);
 				});
+
 		target_position_sub_ = 
 				this -> create_subscription<nav_msgs::msg::Odometry>("/target/odom", 10,
 				[this](const nav_msgs::msg::Odometry::SharedPtr msg) {
@@ -60,6 +62,7 @@ public:
 					target_z_ = msg -> pose.pose.position.z;
 					return;
 				});
+
 		joystick_input_sub_ = 
 				this -> create_subscription<mav_msgs::msg::Joystick>("/sc/joystick_input", 10,
 				[this](const mav_msgs::msg::Joystick::SharedPtr msg) {
@@ -69,6 +72,7 @@ public:
 					else joystick_y_ = 0.00000;
 					return;
 				});
+
 		vehicle_position_sub_ = 
 			this -> create_subscription<nav_msgs::msg::Odometry>("/vehicle/odom", 10,
 				[this](const nav_msgs::msg::Odometry::SharedPtr msg) {
@@ -89,7 +93,7 @@ public:
 		
 		loop_ = 5;
 		auto timer_callback = [this]() -> void {
-			// RCLCPP_INFO(this->get_logger(),"Timer callback:\n");
+			//initial point (5,-5,-2.5)before 10 seconds
 			if(counter_ < 100){
 				setpoint_x_ = 5;
 				setpoint_y_ = -5;
@@ -162,6 +166,10 @@ private:
     }
 };
 
+/**
+ * @brief publish Target position marker for visualization 
+ * 
+ */
 void ShotTypeExecuter::publishTargetPosition(){
   	visualization_msgs::msg::Marker marker_msg;
   	marker_msg.type = Marker::SPHERE;
@@ -173,7 +181,7 @@ void ShotTypeExecuter::publishTargetPosition(){
   	marker_msg.scale.x = 0.1;
   	marker_msg.scale.y = 0.1;
   	marker_msg.scale.z = 0.1;
-  	marker_msg.color.a = 1.0; // Don't forget to set the alpha!
+  	marker_msg.color.a = 1.0; 
   	marker_msg.color.r = 0.0;
   	marker_msg.color.g = 0.0;
   	marker_msg.color.b = 1.0;
@@ -185,17 +193,24 @@ void ShotTypeExecuter::publishTargetPosition(){
   	target_marker_publisher_ -> publish(marker_msg);
 }
 
-
+/**
+ * @brief calculate yaw angle between current pose and target pose for marker orientation
+ * 
+ */
 void ShotTypeExecuter::calculateYawAngle(){
 	float dx = target_x_ - vehicle_x_;
 	float dy = target_y_ - vehicle_y_;
-	yaw_ref_ = 0;//atan2(dx, dy);
-	RCLCPP_INFO(this->get_logger(), "target_x: %f        target_y: %f", target_x_, target_y_);
-	RCLCPP_INFO(this->get_logger(), "vehicle_x: %f       vehicle_y: %f", vehicle_x_, vehicle_y_);
-	RCLCPP_INFO(this->get_logger(), "relative yaw: %f", yaw_ref_);
-	printf("----------------------------------------------------\n");
+	yaw_ref_ = atan2(dx, dy);
+	// RCLCPP_INFO(this->get_logger(), "target_x: %f        target_y: %f", target_x_, target_y_);
+	// RCLCPP_INFO(this->get_logger(), "vehicle_x: %f       vehicle_y: %f", vehicle_x_, vehicle_y_);
+	// RCLCPP_INFO(this->get_logger(), "relative yaw: %f", yaw_ref_);
+	// printf("----------------------------------------------------\n");
 }
 
+/**
+ * @brief main function for trajectory generation given different shot type
+ * 
+ */
 void ShotTypeExecuter::TrajectoryGenerator(){
 	if(SHOT_TYPE ==0){
 		setpoint_x_ = 5 + target_x_;
@@ -212,6 +227,10 @@ void ShotTypeExecuter::TrajectoryGenerator(){
 	}
 }
 
+/**
+ * @brief publish final target setpoint
+ * 
+ */
 void ShotTypeExecuter::publishTargetSetpoint(){
 	MultiDOFJointTrajectory msg;
     msg.header.stamp = this -> now();
@@ -249,7 +268,6 @@ void ShotTypeExecuter::publishTargetSetpoint(){
 	//运镜轨迹
 	publisher_ -> publish(msg);
 
-
 	msg.header.stamp = this -> now();
 	msg.points.clear();
 	//transform to body frame
@@ -263,7 +281,10 @@ void ShotTypeExecuter::publishTargetSetpoint(){
 	trajectory_ref_publisher_ -> publish(msg);
 }
 
-
+/**
+ * @brief publish trajectory setpoint directly to PIXHAWK for PID control
+ * 
+ */
 void ShotTypeExecuter::publish_trajectory_setpoint() const {
 	TrajectorySetpoint msg{};
 	msg.timestamp = timestamp_.load();
