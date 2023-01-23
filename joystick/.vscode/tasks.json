@@ -1,0 +1,10 @@
+{
+    "tasks": [
+        {
+            "label": "colcon build",
+            "type": "shell",
+            "command": "colcon build --cmake-args '-DCMAKE_BUILD_TYPE=Debug'",
+        }
+    ],
+    "version": "2.0.0"
+}

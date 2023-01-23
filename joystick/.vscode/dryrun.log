@@ -1,0 +1,6 @@
+make --dry-run --always-make --keep-going --print-directory
+make: Entering directory '/home/lewis/px4_ros_com_ros2/src/joystick'
+make: Leaving directory '/home/lewis/px4_ros_com_ros2/src/joystick'
+ 
+make: *** No targets specified and no makefile found.  Stop.
+

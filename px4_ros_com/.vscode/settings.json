@@ -1,0 +1,88 @@
+{
+    "editor.tabSize": 8,
+    "editor.rulers": [
+        100
+    ],
+    "files.associations": {
+        "*.txt": "cmake",
+        "*.repos": "yaml",
+        "*.world": "xml",
+        "*.xacro": "xml",
+        "chrono": "cpp",
+        "ostream": "cpp",
+        "cmath": "cpp",
+        "complex": "cpp"
+    },
+    // Autocomplete from ros python packages
+    "python.autoComplete.extraPaths": [
+        "/opt/ros/foxy/lib/python3.8/site-packages/"
+    ],
+    // Environment file lets vscode find python files within workspace
+    "python.envFile": "${workspaceFolder}/.env",
+    // Use the system installed version of autopep8
+    "python.formatting.autopep8Path": "/usr/bin/autopep8",
+    "python.formatting.autopep8Args": [
+        "--max-line-length=100"
+    ],
+    "C_Cpp.default.intelliSenseMode": "clang-x64",
+    "C_Cpp.formatting": "Disabled",
+    "uncrustify.useReplaceOption": true,
+    "uncrustify.configPath.linux": "/opt/ros/foxy/lib/python3.8/site-packages/ament_uncrustify/configuration/ament_code_style.cfg",
+    "cSpell.words": [
+        "RTPS",
+        "athackst",
+        "autopep",
+        "cmake",
+        "cppcheck",
+        "cpplint",
+        "deque",
+        "devcontainer",
+        "ints",
+        "noqa",
+        "pytest",
+        "rclcpp",
+        "rclpy",
+        "repos",
+        "rosdistro",
+        "rosidl",
+        "uncrustify",
+        "xmllint"
+    ],
+    "search.exclude": {
+        "**/node_modules": true,
+        "**/bower_components": true,
+        "**/*.code-search": true,
+        "**/build": true,
+        "**/install": true,
+        "**/log": true
+    },
+    "python.analysis.extraPaths": [
+        "/opt/ros/foxy/lib/python3.8/site-packages/"
+    ],
+    "cSpell.allowCompoundWords": true,
+    "cSpell.ignorePaths": [
+        "**/package-lock.json",
+        "**/node_modules/**",
+        "**/vscode-extension/**",
+        "**/.git/objects/**",
+        ".vscode",
+        ".vscode-insiders",
+        ".devcontainer/devcontainer.json"
+    ]
+    "workbench.colorCustomizations": {
+
+        "editor.selectionBackground": "#6c6c6c",    //選取字色 'you can set other color'
+        
+        "editor.findMatchBackground": "#FFFF96",  //搜索選取字色 'you can set other color'
+        
+        "editor.selectionHighlightBackground": "#8fe5eb9b", //選取字改透明色  'required important'
+        
+        "editor.findMatchHighlightBackground": "#00000000", //搜索選取字改透明色 'required important'
+        
+        "editor.wordHighlightBackground": "#00000000",  //全文相同選取字改透明色 'required important'
+        
+        "editorBracketMatch.border": "#fff200",   //括號的框線色 'you can set other color'
+        
+        "editorBracketMatch.background": "#66414100"  //括號的背景色 'you can set other color'
+    }
+}

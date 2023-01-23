@@ -1,0 +1,30 @@
+{
+  "configurations": [
+    {
+      "browse": {
+        "databaseFilename": "${default}",
+        "limitSymbolsToIncludedHeaders": false
+      },
+      "includePath": [
+        "/home/lewis/px4_ros_com_ros2/install/tutorial_interfaces/include/**",
+        "/home/lewis/px4_ros_com_ros2/install/ros1_bridge/include/**",
+        "/home/lewis/px4_ros_com_ros2/install/px4_ros_com/include/**",
+        "/home/lewis/px4_ros_com_ros2/install/px4_msgs/include/**",
+        "/home/lewis/px4_ros_com_ros2/install/mav_msgs/include/**",
+        "/opt/ros/foxy/include/**",
+        "/home/lewis/px4_ros_com_ros2/src/cpp_pubsub/include/**",
+        "/home/lewis/px4_ros_com_ros2/src/joystick/include/**",
+        "/home/lewis/px4_ros_com_ros2/src/mav_msgs/include/**",
+        "/home/lewis/px4_ros_com_ros2/src/px4_ros_com/include/",
+        "/usr/include/**",
+        "/usr/lib/gcc/x86_64-linux-gnu/9/include"
+      ],
+      "name": "ROS",
+      "intelliSenseMode": "clang-x64",
+      "compilerPath": "/usr/bin/gcc",
+      "cStandard": "gnu11",
+      "cppStandard": "c++14"
+    }
+  ],
+  "version": 4
+}

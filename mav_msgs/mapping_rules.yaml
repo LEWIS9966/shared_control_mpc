@@ -1,0 +1,6 @@
+-
+  ros1_package_name: 'mav_msgs'
+  ros1_message_name: 'RollPitchYawrateThrust'
+  ros2_package_name: 'mav_msgs'
+  ros2_message_name: 'RollPitchYawrateThrust'
+

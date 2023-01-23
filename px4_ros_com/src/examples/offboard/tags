@@ -1,0 +1,36 @@
+!_TAG_FILE_FORMAT	2	/extended format; --format=1 will not append ;" to lines/
+!_TAG_FILE_SORTED	1	/0=unsorted, 1=sorted, 2=foldcase/
+!_TAG_PROGRAM_AUTHOR	Darren Hiebert	/dhiebert@users.sourceforge.net/
+!_TAG_PROGRAM_NAME	Exuberant Ctags	//
+!_TAG_PROGRAM_URL	http://ctags.sourceforge.net	/official site/
+!_TAG_PROGRAM_VERSION	5.8	//
+OffboardControl	offboard_control.cpp	/^	OffboardControl() : Node("offboard_control") {$/;"	f	class:OffboardControl
+OffboardControl	offboard_control.cpp	/^class OffboardControl : public rclcpp::Node {$/;"	c	file:
+OffboardControl	offboard_control_original.cpp	/^	OffboardControl() : Node("offboard_control") {$/;"	f	class:OffboardControl
+OffboardControl	offboard_control_original.cpp	/^class OffboardControl : public rclcpp::Node {$/;"	c	file:
+arm	offboard_control.cpp	/^void OffboardControl::arm() const {$/;"	f	class:OffboardControl
+arm	offboard_control_original.cpp	/^void OffboardControl::arm() const {$/;"	f	class:OffboardControl
+disarm	offboard_control.cpp	/^void OffboardControl::disarm() const {$/;"	f	class:OffboardControl
+disarm	offboard_control_original.cpp	/^void OffboardControl::disarm() const {$/;"	f	class:OffboardControl
+main	offboard_control.cpp	/^int main(int argc, char* argv[]) {$/;"	f
+main	offboard_control_original.cpp	/^int main(int argc, char* argv[]) {$/;"	f
+offboard_control_mode_publisher_	offboard_control.cpp	/^	rclcpp::Publisher<OffboardControlMode>::SharedPtr offboard_control_mode_publisher_;$/;"	m	class:OffboardControl	file:
+offboard_control_mode_publisher_	offboard_control_original.cpp	/^	rclcpp::Publisher<OffboardControlMode>::SharedPtr offboard_control_mode_publisher_;$/;"	m	class:OffboardControl	file:
+offboard_setpoint_counter_	offboard_control.cpp	/^	uint64_t offboard_setpoint_counter_;   \/\/!< counter for the number of setpoints sent$/;"	m	class:OffboardControl	file:
+offboard_setpoint_counter_	offboard_control_original.cpp	/^	uint64_t offboard_setpoint_counter_;   \/\/!< counter for the number of setpoints sent$/;"	m	class:OffboardControl	file:
+publish_offboard_control_mode	offboard_control.cpp	/^void OffboardControl::publish_offboard_control_mode() const {$/;"	f	class:OffboardControl
+publish_offboard_control_mode	offboard_control_original.cpp	/^void OffboardControl::publish_offboard_control_mode() const {$/;"	f	class:OffboardControl
+publish_trajectory_setpoint	offboard_control.cpp	/^void OffboardControl::publish_trajectory_setpoint() const {$/;"	f	class:OffboardControl
+publish_trajectory_setpoint	offboard_control_original.cpp	/^void OffboardControl::publish_trajectory_setpoint() const {$/;"	f	class:OffboardControl
+publish_vehicle_command	offboard_control.cpp	/^void OffboardControl::publish_vehicle_command(uint16_t command, float param1,$/;"	f	class:OffboardControl
+publish_vehicle_command	offboard_control_original.cpp	/^void OffboardControl::publish_vehicle_command(uint16_t command, float param1,$/;"	f	class:OffboardControl
+timer_	offboard_control.cpp	/^	rclcpp::TimerBase::SharedPtr timer_;$/;"	m	class:OffboardControl	file:
+timer_	offboard_control_original.cpp	/^	rclcpp::TimerBase::SharedPtr timer_;$/;"	m	class:OffboardControl	file:
+timestamp_	offboard_control.cpp	/^	std::atomic<uint64_t> timestamp_;   \/\/!< common synced timestamped$/;"	m	class:OffboardControl	file:
+timestamp_	offboard_control_original.cpp	/^	std::atomic<uint64_t> timestamp_;   \/\/!< common synced timestamped$/;"	m	class:OffboardControl	file:
+timesync_sub_	offboard_control.cpp	/^	rclcpp::Subscription<px4_msgs::msg::Timesync>::SharedPtr timesync_sub_;$/;"	m	class:OffboardControl	file:
+timesync_sub_	offboard_control_original.cpp	/^	rclcpp::Subscription<px4_msgs::msg::Timesync>::SharedPtr timesync_sub_;$/;"	m	class:OffboardControl	file:
+trajectory_setpoint_publisher_	offboard_control.cpp	/^	rclcpp::Publisher<TrajectorySetpoint>::SharedPtr trajectory_setpoint_publisher_;$/;"	m	class:OffboardControl	file:
+trajectory_setpoint_publisher_	offboard_control_original.cpp	/^	rclcpp::Publisher<TrajectorySetpoint>::SharedPtr trajectory_setpoint_publisher_;$/;"	m	class:OffboardControl	file:
+vehicle_command_publisher_	offboard_control.cpp	/^	rclcpp::Publisher<VehicleCommand>::SharedPtr vehicle_command_publisher_;$/;"	m	class:OffboardControl	file:
+vehicle_command_publisher_	offboard_control_original.cpp	/^	rclcpp::Publisher<VehicleCommand>::SharedPtr vehicle_command_publisher_;$/;"	m	class:OffboardControl	file:
